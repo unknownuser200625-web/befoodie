@@ -1,5 +1,4 @@
 import MenuClient from '@/components/menu/MenuClient';
-import { CartProvider } from '@/context/CartContext';
 
 export default async function MenuPage({
     params,
@@ -7,9 +6,8 @@ export default async function MenuPage({
     params: Promise<{ tableId: string }>;
 }) {
     const { tableId } = await params;
-    return (
-        <CartProvider tableId={tableId}>
-            <MenuClient tableId={tableId} />
-        </CartProvider>
-    );
+    // Legacy route - hardcode restaurant slug to 'demo'
+    const restaurantSlug = 'demo';
+
+    return <MenuClient tableId={tableId} restaurantSlug={restaurantSlug} />;
 }

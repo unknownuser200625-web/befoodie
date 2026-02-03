@@ -8,9 +8,11 @@ export default async function MenuLayout({
     params: Promise<{ tableId: string }>;
 }) {
     const { tableId } = await params;
+    // Legacy route - hardcode restaurant slug to 'demo'
+    const restaurantSlug = 'demo';
 
     return (
-        <CartProvider tableId={tableId}>
+        <CartProvider tableId={tableId} restaurantSlug={restaurantSlug}>
             {children}
         </CartProvider>
     );

@@ -56,6 +56,7 @@ app.prepare().then(() => {
     console.log(`> Security initialized. Owner Password configured: ${process.env.OWNER_PASSWORD ? 'YES' : 'NO'}`);
 
     let io: Server;
+    (global as any).io = undefined; // Initialize
 
     const httpServer = createServer((req, res) => {
         const parsedUrl = parse(req.url!, true);
@@ -551,6 +552,21 @@ app.prepare().then(() => {
     });
 
     io = new Server(httpServer);
+    (global as any).io = io;
+
+    io.on('connection', (socket) => {
+        const slug = socket.handshake.query.restaurantSlug as string;
+        if (slug) {
+            socket.join(slug);
+            console.log(`> Socket connected to restaurant room: ${slug}`);
+        }
+
+        socket.on('join_restaurant', (slug: string) => {
+            socket.join(slug);
+            console.log(`> Socket joined restaurant room: ${slug}`);
+        });
+    });
+
     httpServer.listen(port, () => {
         console.log(`> Ready on http://${hostname}:${port}`);
     });

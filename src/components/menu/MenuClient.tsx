@@ -1,14 +1,23 @@
 'use client';
 
-import { Product } from '@/types';
+import { Product, Restaurant } from '@/types';
 import { useEffect, useState, useMemo } from 'react';
 import { io } from 'socket.io-client';
 import { ProductCard } from './ProductCard';
 import { Search, Tag, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { CartDrawer } from '@/components/cart/CartDrawer';
+import { Header } from '@/components/ui/Header';
+import { Footer } from '@/components/ui/Footer';
 
-export default function MenuClient({ tableId }: { tableId: string }) {
+export default function MenuClient({
+    tableId,
+    restaurantSlug
+}: {
+    tableId: string;
+    restaurantSlug: string;
+}) {
+    const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<string[]>([]);
     const [activeCategory, setActiveCategory] = useState<string>('All');
@@ -19,15 +28,23 @@ export default function MenuClient({ tableId }: { tableId: string }) {
     const cartContext = useCart();
     const { addToCart, totalItems } = cartContext;
 
+    // Fetch Restaurant Details
+    useEffect(() => {
+        fetch(`/r/${restaurantSlug}/api/details`)
+            .then(res => res.json())
+            .then(data => setRestaurant(data))
+            .catch(err => console.error('Failed to fetch restaurant', err));
+    }, [restaurantSlug]);
+
     useEffect(() => {
         // Data Fetching
         const loadInitialData = async () => {
             try {
-                const prodRef = await fetch('/api/products');
+                const prodRef = await fetch(`/r/${restaurantSlug}/api/products`);
                 const productsData = await prodRef.json();
                 setProducts(productsData);
 
-                const catRef = await fetch('/api/categories');
+                const catRef = await fetch(`/r/${restaurantSlug}/api/categories`);
                 const categoriesData = await catRef.json();
                 setCategories(categoriesData);
             } catch (err) {
@@ -38,13 +55,15 @@ export default function MenuClient({ tableId }: { tableId: string }) {
         loadInitialData();
 
         // Socket Config
-        const socket = io();
+        const socket = io({
+            query: { restaurantSlug }
+        });
         socket.on('product_added', (p: Product) => setProducts(prev => [...prev, p]));
         socket.on('product_updated', (p: Product) => setProducts(prev => prev.map(old => old.id === p.id ? p : old)));
         socket.on('product_deleted', (id: string) => setProducts(prev => prev.filter(p => p.id !== id)));
         socket.on('category_update', (cats: string[]) => setCategories(cats));
         socket.on('products_refresh', () => {
-            fetch('/api/products').then(res => res.json()).then(setProducts);
+            fetch(`/r/${restaurantSlug}/api/products`).then(res => res.json()).then(setProducts);
         });
 
         return () => { socket.disconnect(); };
@@ -62,6 +81,8 @@ export default function MenuClient({ tableId }: { tableId: string }) {
 
     return (
         <div className="pb-32 bg-[#0a0a0a] min-h-screen text-white">
+            <Header restaurantName={restaurant?.name} restaurantSlug={restaurantSlug} />
+
             <div className="pt-24 px-6 mb-8 max-w-4xl mx-auto">
                 <div className="relative group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={20} />
@@ -124,7 +145,10 @@ export default function MenuClient({ tableId }: { tableId: string }) {
                 </button>
             )}
 
-            <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} tableId={tableId} />
+            <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} tableId={tableId} restaurantSlug={restaurantSlug} />
+            <div className="mt-20">
+                <Footer />
+            </div>
         </div>
     );
 }

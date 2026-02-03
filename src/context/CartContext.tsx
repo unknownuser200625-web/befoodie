@@ -14,13 +14,23 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export function CartProvider({ children, tableId }: { children: React.ReactNode; tableId: string }) {
+export function CartProvider({
+    children,
+    tableId,
+    restaurantSlug
+}: {
+    children: React.ReactNode;
+    tableId: string;
+    restaurantSlug: string;
+}) {
     const [cart, setCart] = useState<CartItem[]>([]);
     const [isInitialized, setIsInitialized] = useState(false);
 
+    const storageKey = `befoodie_cart_${restaurantSlug}_${tableId}`;
+
     // Load from local storage
     useEffect(() => {
-        const savedCart = localStorage.getItem(`broastify_cart_${tableId}`);
+        const savedCart = localStorage.getItem(storageKey);
         if (savedCart) {
             try {
                 setCart(JSON.parse(savedCart));
@@ -29,13 +39,13 @@ export function CartProvider({ children, tableId }: { children: React.ReactNode;
             }
         }
         setIsInitialized(true);
-    }, [tableId]);
+    }, [storageKey]);
 
     // Save to local storage
     useEffect(() => {
         if (!isInitialized) return;
-        localStorage.setItem(`broastify_cart_${tableId}`, JSON.stringify(cart));
-    }, [cart, tableId, isInitialized]);
+        localStorage.setItem(storageKey, JSON.stringify(cart));
+    }, [cart, storageKey, isInitialized]);
 
     const addToCart = (product: Product) => {
         setCart((prev) => {

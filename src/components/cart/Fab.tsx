@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { CartDrawer } from './CartDrawer';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export function Fab({ tableId }: { tableId: string }) {
+export function Fab({ tableId, restaurantSlug }: { tableId: string; restaurantSlug: string }) {
     const { totalItems } = useCart();
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -37,6 +37,7 @@ export function Fab({ tableId }: { tableId: string }) {
                 isOpen={isDrawerOpen}
                 onClose={() => setIsDrawerOpen(false)}
                 tableId={tableId}
+                restaurantSlug={restaurantSlug}
             />
         </>
     );

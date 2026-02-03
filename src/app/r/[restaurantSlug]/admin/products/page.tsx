@@ -1,13 +1,20 @@
 'use client';
 
 import { Header } from '@/components/ui/Header';
-import { Category, Product } from '@/types';
+import { Footer } from '@/components/ui/Footer';
+import { Category, Product, Restaurant } from '@/types';
 import { ArrowLeft, Search, Plus, Trash2, Edit2, X, Check, Minus, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { io } from 'socket.io-client';
 
-export default function ProductManagerPage() {
+export default function ProductManagerPage({
+    params,
+}: {
+    params: Promise<{ restaurantSlug: string }>;
+}) {
+    const { restaurantSlug } = use(params);
+    const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -25,28 +32,38 @@ export default function ProductManagerPage() {
 
     useEffect(() => {
         const checkAuth = async () => {
-            const res = await fetch('/api/auth/status');
+            const res = await fetch(`/r/${restaurantSlug}/api/auth/status`);
             const data = await res.json();
             if (!data.authenticated || data.role !== 'owner') {
-                window.location.href = '/admin/login';
+                window.location.href = `/r/${restaurantSlug}/admin/login`;
             }
         };
         checkAuth();
-    }, []);
+    }, [restaurantSlug]);
+
+    // Fetch Restaurant Details
+    useEffect(() => {
+        fetch(`/r/${restaurantSlug}/api/details`)
+            .then(res => res.json())
+            .then(data => setRestaurant(data))
+            .catch(err => console.error('Failed to fetch restaurant', err));
+    }, [restaurantSlug]);
 
     useEffect(() => {
-        fetch('/api/products')
+        fetch(`/r/${restaurantSlug}/api/products`)
             .then(res => res.json())
             .then(setProducts);
 
-        fetch('/api/categories')
+        fetch(`/r/${restaurantSlug}/api/categories`)
             .then(res => res.json())
             .then(cats => {
                 setCategories(cats);
                 if (cats.length > 0) setFormData(prev => ({ ...prev, category: cats[0] }));
             });
 
-        const socket = io();
+        const socket = io({
+            query: { restaurantSlug }
+        });
         socket.on('product_added', (newProd: Product) => setProducts(prev => [...prev, newProd]));
         socket.on('product_updated', (updatedProd: Product) => {
             setProducts(prev => prev.map(p => p.id === updatedProd.id ? updatedProd : p));
@@ -56,16 +73,16 @@ export default function ProductManagerPage() {
         });
         socket.on('category_update', (newCats: string[]) => setCategories(newCats));
         socket.on('products_refresh', () => {
-            fetch('/api/products').then(res => res.json()).then(setProducts);
+            fetch(`/r/${restaurantSlug}/api/products`).then(res => res.json()).then(setProducts);
         });
 
         return () => { socket.disconnect(); }
-    }, []);
+    }, [restaurantSlug]);
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         const method = editingId ? 'PUT' : 'POST';
-        const url = '/api/products';
+        const url = `/r/${restaurantSlug}/api/products`;
         const payload = editingId ? { ...formData, id: editingId } : formData;
 
         try {
@@ -87,14 +104,14 @@ export default function ProductManagerPage() {
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this product?')) return;
         try {
-            await fetch(`/api/products?id=${id}`, { method: 'DELETE' });
+            await fetch(`/r/${restaurantSlug}/api/products?id=${id}`, { method: 'DELETE' });
         } catch (error) {
             alert('Failed to delete product');
         }
     };
 
     const toggleAvailability = async (product: Product) => {
-        await fetch('/api/products/toggle', {
+        await fetch(`/r/${restaurantSlug}/api/products/toggle`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: product.id, available: !product.available }),
@@ -102,7 +119,7 @@ export default function ProductManagerPage() {
     };
 
     const adjustPrice = async (product: Product, delta: number) => {
-        await fetch('/api/products', {
+        await fetch(`/r/${restaurantSlug}/api/products`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: product.id, price: Math.max(0, product.price + delta) }),
@@ -116,14 +133,14 @@ export default function ProductManagerPage() {
 
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white">
-            <Header />
+            <Header restaurantName={restaurant?.name} restaurantSlug={restaurantSlug} />
             <main className="pt-24 px-6 max-w-5xl mx-auto pb-20">
                 <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
-                        <Link href="/admin" className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
+                        <Link href={`/r/${restaurantSlug}/admin`} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
                             <ArrowLeft />
                         </Link>
-                        <h1 className="text-3xl font-bold">Product Manager</h1>
+                        <h1 className="text-3xl font-bold uppercase italic">{restaurant?.name || 'BEFOODIE'} | PRODUCTS</h1>
                     </div>
                     <button
                         onClick={() => { setIsAdding(true); setEditingId(null); setFormData({ name: '', price: 0, category: 'Veg Burger', image: '', available: true }); }}
@@ -286,6 +303,7 @@ export default function ProductManagerPage() {
                     )}
                 </div>
             </main>
+            <Footer />
         </div>
     );
 }

@@ -10,9 +10,10 @@ interface CartDrawerProps {
     isOpen: boolean;
     onClose: () => void;
     tableId: string;
+    restaurantSlug: string;
 }
 
-export function CartDrawer({ isOpen, onClose, tableId }: CartDrawerProps) {
+export function CartDrawer({ isOpen, onClose, tableId, restaurantSlug }: CartDrawerProps) {
     const { cart, removeFromCart, addToCart, cartTotal, clearCart } = useCart();
     const [isOrdering, setIsOrdering] = useState(false);
 
@@ -20,16 +21,13 @@ export function CartDrawer({ isOpen, onClose, tableId }: CartDrawerProps) {
         setIsOrdering(true);
 
         const orderData = {
-            id: `ord-${Date.now()}`,
             tableId,
             items: cart,
             totalPrice: cartTotal,
-            status: 'Pending',
-            timestamp: Date.now(),
         };
 
         try {
-            const res = await fetch('/api/orders', {
+            const res = await fetch(`/r/${restaurantSlug}/api/orders`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(orderData),
