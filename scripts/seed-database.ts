@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
+import * as bcrypt from 'bcryptjs';
 import { PRODUCTS } from '../src/lib/data'; // Adjust path if needed
-import { Product } from '../src/types';
 
 // Load .env.local manually
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
@@ -29,12 +29,14 @@ async function seedDatabase() {
             .single();
 
         if (resError && resError.code !== 'PGRST116') {
-            // PGRST116 is "The result contains 0 rows"
             console.error('Error fetching restaurant:', resError);
             return;
         }
 
         let restaurantId = restaurant?.id;
+
+        const ownerHash = await bcrypt.hash('demo@123', 10);
+        const pinHash = await bcrypt.hash('1234', 10);
 
         if (!restaurantId) {
             console.log('Creating demo restaurant...');
@@ -43,9 +45,9 @@ async function seedDatabase() {
                 .insert({
                     slug: 'demo',
                     name: 'Demo Restaurant',
-                    active_session_id: 'session-1', // Default active session
-                    owner_password_hash: 'admin123', // In real app, hash this
-                    staff_pin_hash: '1234'
+                    active_session_id: 'session-1',
+                    owner_password_hash: ownerHash,
+                    staff_pin_hash: pinHash
                 })
                 .select()
                 .single();
@@ -55,6 +57,13 @@ async function seedDatabase() {
             console.log('Created demo restaurant with ID:', restaurantId);
         } else {
             console.log('Found existing demo restaurant:', restaurantId);
+            // Optional: Update hashes if they don't match, but for seeding we might just want to ensure they are set
+            // For now, let's update them to ensure we are in a consistent state
+            await supabase.from('restaurants').update({
+                owner_password_hash: ownerHash,
+                staff_pin_hash: pinHash
+            }).eq('id', restaurantId);
+            console.log('Updated demo restaurant credentials.');
         }
 
         // 2. Sync Categories
@@ -62,7 +71,6 @@ async function seedDatabase() {
         console.log(`Found ${uniqueCategories.length} categories to sync.`);
 
         for (const catName of uniqueCategories) {
-            // Check if exists
             const { data: existingCat } = await supabase
                 .from('categories')
                 .select('id')
@@ -82,8 +90,6 @@ async function seedDatabase() {
 
         // 3. Sync Products
         console.log(`Syncing ${PRODUCTS.length} products...`);
-
-        // Prepare products with correct restaurant_id
         const productsToUpsert = PRODUCTS.map((p: any) => ({
             id: p.id,
             restaurant_id: restaurantId,
@@ -95,7 +101,6 @@ async function seedDatabase() {
             available: p.available
         }));
 
-        // Upsert (Insert or Update)
         const { error: productsError } = await supabase
             .from('products')
             .upsert(productsToUpsert, { onConflict: 'id' });
@@ -104,11 +109,10 @@ async function seedDatabase() {
             console.error('Error syncing products:', productsError);
             throw productsError;
         }
-
         console.log('Products synced successfully!');
 
         // 4. Create Tables
-        const tables = ['1', '2', '3', '4', '5'];
+        const tables = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
         console.log(`Syncing ${tables.length} tables...`);
 
         for (const tNum of tables) {
@@ -117,14 +121,13 @@ async function seedDatabase() {
                 .upsert({
                     restaurant_id: restaurantId,
                     table_number: tNum
-                }, { onConflict: 'restaurant_id, table_number' }); // Requires unique constraint in schema
+                }, { onConflict: 'restaurant_id, table_number' });
 
             if (tableError) {
                 console.error(`Error syncing table ${tNum}:`, tableError);
             }
         }
         console.log('Tables synced.');
-
         console.log('Seed completed successfully.');
 
     } catch (error) {

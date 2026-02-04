@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import * as jwt from "jsonwebtoken";
 import { supabase } from "@/lib/supabase";
+import * as bcrypt from "bcryptjs";
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
 
@@ -11,8 +12,17 @@ export async function POST(
 ) {
     try {
         const { restaurantSlug } = await params;
-        const body = await req.json();
-        const { role, password, pin } = body;
+
+        // --- TRACE MODE: Task 3 - Raw Payload Integrity ---
+        const rawJson = await req.json();
+        console.log(`[TRACE] RAW REQUEST BODY: ${JSON.stringify(rawJson)}`);
+
+        const { role, password, pin } = rawJson;
+
+        // --- TRACE MODE: Task 2 - Slug Routing ---
+        console.log(`[TRACE] Received Slug: "${restaurantSlug}"`);
+        console.log(`[TRACE] Password Provided: ${password ? 'YES (Length: ' + password.length + ')' : 'NO'}`);
+        console.log(`[TRACE] PIN Provided: ${pin ? 'YES (Length: ' + pin.length + ')' : 'NO'}`);
 
         // Fetch restaurant details for authentication info
         const { data: restaurant, error: fetchError } = await supabase
@@ -22,18 +32,29 @@ export async function POST(
             .single();
 
         if (fetchError || !restaurant) {
+            console.log(`[TRACE] FAILED: Restaurant NOT FOUND for slug: "${restaurantSlug}"`);
             return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
         }
+
+        console.log(`[TRACE] RESOLVED restaurant_id: ${restaurant.id}`);
+        console.log(`[TRACE] Attempting login for role: ${role}`);
 
         let authenticatedRole = "";
 
         if (role === "owner") {
-            // Using placeholder logic since hashes aren't implemented yet, but we check against restaurant data
-            if (password === restaurant.owner_password_hash || password === process.env.OWNER_PASSWORD) {
+            const storedHash = restaurant.owner_password_hash || "";
+            console.log(`[TRACE] Comparing Owner Password against hash: ${storedHash.substring(0, 10)}...`);
+            const isValid = await bcrypt.compare(password, storedHash);
+            console.log(`[TRACE] RESULT: ${isValid ? 'MATCH FOUND' : 'MISMATCH'}`);
+            if (isValid) {
                 authenticatedRole = "owner";
             }
         } else if (role === "staff") {
-            if (pin === restaurant.staff_pin_hash || pin === process.env.KITCHEN_PIN) {
+            const storedHash = restaurant.staff_pin_hash || "";
+            console.log(`[TRACE] Comparing Staff PIN against hash: ${storedHash.substring(0, 10)}...`);
+            const isValid = await bcrypt.compare(pin, storedHash);
+            console.log(`[TRACE] RESULT: ${isValid ? 'MATCH FOUND' : 'MISMATCH'}`);
+            if (isValid) {
                 authenticatedRole = "staff";
             }
         }
@@ -76,6 +97,7 @@ export async function POST(
             { status: 401 }
         );
     } catch (error) {
+        console.error("Login error:", error);
         return NextResponse.json(
             { success: false, error: "Internal Server Error" },
             { status: 500 }

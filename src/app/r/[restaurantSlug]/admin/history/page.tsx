@@ -20,7 +20,7 @@ export default function HistoryPage({
 
     useEffect(() => {
         const checkAuth = async () => {
-            const result = await safeFetch('/api/auth/status');
+            const result = await safeFetch(`/r/${restaurantSlug}/api/auth/status`);
             if (result.ok && result.data) {
                 if (!result.data.authenticated || result.data.role !== 'owner') {
                     window.location.href = `/r/${restaurantSlug}/admin/login`;
@@ -40,7 +40,7 @@ export default function HistoryPage({
 
     useEffect(() => {
         const loadHistory = async () => {
-            const result = await safeFetch('/api/history');
+            const result = await safeFetch(`/r/${restaurantSlug}/api/history`);
             if (result.ok && Array.isArray(result.data)) {
                 setHistory(result.data.reverse());
             } else {

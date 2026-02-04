@@ -1,18 +1,15 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { Lock, ShieldCheck, User, Key, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { Header } from '@/components/ui/Header';
 import { safeFetch } from '@/lib/api';
 import { Restaurant } from '@/types';
 
-export default function LoginPage({
-    params,
-}: {
-    params: Promise<{ restaurantSlug: string }>;
-}) {
-    const { restaurantSlug } = use(params);
+export default function LoginPage() {
+    const params = useParams();
+    const restaurantSlug = params?.restaurantSlug as string;
     const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
     const [type, setType] = useState<'owner' | 'staff'>('owner');
     const [credential, setCredential] = useState('');
@@ -32,7 +29,7 @@ export default function LoginPage({
 
     useEffect(() => {
         const check = async () => {
-            const result = await safeFetch('/api/auth/status');
+            const result = await safeFetch(`/r/${restaurantSlug}/api/auth/status`);
             if (result.ok && result.data) {
                 setStatus(result.data);
                 if (result.data.authenticated) {
@@ -60,12 +57,18 @@ export default function LoginPage({
         setLoading(true);
         setError('');
 
+        if (!restaurantSlug) {
+            setError('Invalid restaurant workspace');
+            setLoading(false);
+            return;
+        }
+
         try {
             const body = type === 'owner'
                 ? { role: 'owner', password: credential }
                 : { role: 'staff', pin: credential };
 
-            const result = await safeFetch('/api/auth/login', {
+            const result = await safeFetch(`/r/${restaurantSlug}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)

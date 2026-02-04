@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Header } from '@/components/ui/Header';
 import { Footer } from '@/components/ui/Footer';
-import { LayoutDashboard, UtensilsCrossed, Package, Tag, Receipt, CheckCircle, Clock, X, Flame } from 'lucide-react';
+import { LayoutDashboard, UtensilsCrossed, Package, Tag, Receipt, CheckCircle, Clock, X, Flame, Shield } from 'lucide-react';
 import { useEffect, useState, use } from 'react';
 import { io } from 'socket.io-client';
 import { TableSession, Order, Restaurant } from '@/types';
@@ -23,7 +23,7 @@ export default function AdminHub({
 
     useEffect(() => {
         const checkAuth = async () => {
-            const res = await fetch('/api/auth/status');
+            const res = await fetch(`/r/${restaurantSlug}/api/auth/status`);
             const data = await res.json();
             setAuth(data);
             if (!data.authenticated || data.role !== 'owner') {
@@ -154,6 +154,16 @@ export default function AdminHub({
                         <div>
                             <h2 className="text-xl font-bold">Categories</h2>
                             <p className="text-xs text-gray-500">Organize menu</p>
+                        </div>
+                    </Link>
+
+                    <Link href={`/r/${restaurantSlug}/admin/settings/security`} className="bg-[#181818] p-6 rounded-2xl border border-white/5 hover:border-amber-500/50 transition-all flex items-center gap-4 group">
+                        <div className="p-4 bg-amber-500/20 rounded-xl text-amber-400">
+                            <Shield size={28} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold">Security</h2>
+                            <p className="text-xs text-gray-500">Master Password & PIN</p>
                         </div>
                     </Link>
                 </div>
