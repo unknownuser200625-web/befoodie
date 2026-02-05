@@ -54,7 +54,11 @@ export default function AdminHub({
 
                 setLoading(false);
             } catch (e) {
-                console.error('Fetch failed', e);
+                if (e instanceof Error) {
+                    console.error('Fetch failed:', e.message);
+                } else {
+                    console.error('Fetch failed:', e);
+                }
                 setLoading(false);
             }
         };
@@ -100,7 +104,11 @@ export default function AdminHub({
                 fetch(`/r/${restaurantSlug}/api/sessions`).then(r => r.json()).then(setSessions);
             }
         } catch (err) {
-            console.error(err);
+            if (err instanceof Error) {
+                console.error('Mark paid failed:', err.message);
+            } else {
+                console.error('Mark paid failed:', err);
+            }
         }
     };
 

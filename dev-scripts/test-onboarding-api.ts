@@ -35,7 +35,11 @@ async function testOnboarding() {
         }
 
     } catch (e) {
-        console.error('API Error:', e);
+        if (e instanceof Error) {
+            console.error('API Error:', e.message);
+        } else {
+            console.error('API Error:', e);
+        }
     }
 }
 

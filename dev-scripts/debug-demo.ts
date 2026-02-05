@@ -34,7 +34,11 @@ async function run() {
         console.log(`[VERIFY] Staff PIN Match (1234): ${staffMatch ? '✅ YES' : '❌ NO'}`);
 
     } catch (e) {
-        console.error('UNEXPECTED ERROR:', e);
+        if (e instanceof Error) {
+            console.error('UNEXPECTED ERROR:', e.message);
+        } else {
+            console.error('UNEXPECTED ERROR:', e);
+        }
     }
 }
 run();

@@ -54,11 +54,15 @@ export async function GET() {
             },
             timestamp: new Date().toISOString(),
         });
-    } catch (error: any) {
+    } catch (error) {
+        let details = "Unknown error";
+        if (error instanceof Error) {
+            details = error.message;
+        }
         return NextResponse.json({
             success: false,
             error: 'Database connection test failed',
-            details: error.message,
+            details: details,
         }, { status: 500 });
     }
 }

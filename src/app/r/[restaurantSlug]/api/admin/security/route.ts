@@ -92,8 +92,12 @@ export async function PUT(
 
         return NextResponse.json({ success: true, message: "Security settings updated successfully" });
 
-    } catch (error: any) {
-        console.error("Security API error:", error);
+    } catch (error) {
+        if (error instanceof Error) {
+            console.error("Security API error:", error.message);
+        } else {
+            console.error("Security API error:", error);
+        }
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

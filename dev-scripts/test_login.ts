@@ -25,7 +25,11 @@ async function testLogin() {
             console.log('--- LOGIN TEST: FAILED ---');
         }
     } catch (err) {
-        console.error('[ERROR] Fetch failed:', err);
+        if (err instanceof Error) {
+            console.error('[ERROR] Fetch failed:', err.message);
+        } else {
+            console.error('[ERROR] Fetch failed:', err);
+        }
     }
 }
 

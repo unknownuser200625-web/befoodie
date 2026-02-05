@@ -53,8 +53,12 @@ export default function SecuritySettingsPage({
 
             setPassMsg({ type: 'success', text: 'Password updated successfully' });
             setPassData({ oldPassword: '', newPassword: '', confirmPassword: '' });
-        } catch (err: any) {
-            setPassMsg({ type: 'error', text: err.message });
+        } catch (err) {
+            if (err instanceof Error) {
+                setPassMsg({ type: 'error', text: err.message });
+            } else {
+                setPassMsg({ type: 'error', text: 'An unexpected error occurred' });
+            }
         } finally {
             setPassLoading(false);
         }
@@ -85,8 +89,12 @@ export default function SecuritySettingsPage({
 
             setPinMsg({ type: 'success', text: 'Staff PIN updated successfully' });
             setPinData({ newPin: '' });
-        } catch (err: any) {
-            setPinMsg({ type: 'error', text: err.message });
+        } catch (err) {
+            if (err instanceof Error) {
+                setPinMsg({ type: 'error', text: err.message });
+            } else {
+                setPinMsg({ type: 'error', text: 'An unexpected error occurred' });
+            }
         } finally {
             setPinLoading(false);
         }

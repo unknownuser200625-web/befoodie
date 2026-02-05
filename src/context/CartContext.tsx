@@ -35,7 +35,11 @@ export function CartProvider({
             try {
                 setCart(JSON.parse(savedCart));
             } catch (e) {
-                console.error('Failed to parse cart', e);
+                if (e instanceof Error) {
+                    console.error('Failed to parse cart:', e.message);
+                } else {
+                    console.error('Failed to parse cart:', e);
+                }
             }
         }
         setIsInitialized(true);

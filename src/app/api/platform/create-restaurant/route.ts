@@ -95,8 +95,13 @@ export async function POST(req: Request) {
             message: "Restaurant created successfully with default setup."
         });
 
-    } catch (error: any) {
-        console.error("Onboarding error:", error);
-        return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+    } catch (error) {
+        if (error instanceof Error) {
+            console.error("Onboarding error:", error.message);
+            return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+        } else {
+            console.error("Onboarding error:", error);
+            return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        }
     }
 }

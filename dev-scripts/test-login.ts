@@ -28,7 +28,11 @@ async function testLogin() {
             console.error('❌ Owner Login Failed');
         }
     } catch (e) {
-        console.error('Owner Login Error:', e);
+        if (e instanceof Error) {
+            console.error('Owner Login Error:', e.message);
+        } else {
+            console.error('Owner Login Error:', e);
+        }
     }
 
     // 2. Test Staff Login
@@ -53,7 +57,11 @@ async function testLogin() {
             console.error('❌ Staff Login Failed');
         }
     } catch (e) {
-        console.error('Staff Login Error:', e);
+        if (e instanceof Error) {
+            console.error('Staff Login Error:', e.message);
+        } else {
+            console.error('Staff Login Error:', e);
+        }
     }
 }
 

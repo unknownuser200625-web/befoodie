@@ -32,7 +32,11 @@ async function testConnection() {
         console.log('Success! Connection verified.');
         console.log('Data sample:', data);
     } catch (err) {
-        console.error('Unexpected error:', err);
+        if (err instanceof Error) {
+            console.error('Unexpected error:', err.message);
+        } else {
+            console.error('Unexpected error:', err);
+        }
         process.exit(1);
     }
 }

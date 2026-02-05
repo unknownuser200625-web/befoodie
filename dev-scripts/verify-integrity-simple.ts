@@ -24,6 +24,12 @@ async function verifyIntegrity() {
         console.log(`Owner Match (demo@123): ${ownerMatch ? 'YES' : 'NO'}`);
         console.log(`Staff Match (1234): ${staffMatch ? 'YES' : 'NO'}`);
         console.log('-------------------------------');
-    } catch (e) { console.log('ERROR: ' + e.message); }
+    } catch (e) {
+        if (e instanceof Error) {
+            console.log('ERROR: ' + e.message);
+        } else {
+            console.log('ERROR: ' + e);
+        }
+    }
 }
 verifyIntegrity();

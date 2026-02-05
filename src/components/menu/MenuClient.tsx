@@ -48,7 +48,11 @@ export default function MenuClient({
                 const categoriesData = await catRef.json();
                 setCategories(categoriesData);
             } catch (err) {
-                console.error('Failed to load menu data', err);
+                if (err instanceof Error) {
+                    console.error('Failed to load menu data:', err.message);
+                } else {
+                    console.error('Failed to load menu data:', err);
+                }
             }
         };
 

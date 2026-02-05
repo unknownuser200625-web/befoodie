@@ -104,7 +104,13 @@ export default function KitchenPage({
                 alarmRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
                 alarmRef.current.loop = true;
             }
-            alarmRef.current.play().catch(e => console.log('Audio play blocked', e));
+            alarmRef.current.play().catch(e => {
+                if (e instanceof Error) {
+                    console.log('Audio play blocked:', e.message);
+                } else {
+                    console.log('Audio play blocked:', e);
+                }
+            });
         } else {
             if (alarmRef.current) {
                 alarmRef.current.pause();
@@ -121,7 +127,11 @@ export default function KitchenPage({
                 body: JSON.stringify({ id: orderId, status: newStatus })
             });
         } catch (err) {
-            console.error('Update failed', err);
+            if (err instanceof Error) {
+                console.error('Update failed:', err.message);
+            } else {
+                console.error('Update failed:', err);
+            }
         }
     };
 

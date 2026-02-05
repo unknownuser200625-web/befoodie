@@ -15,7 +15,11 @@ export function getDB() {
             globalForDB.dbMemory = JSON.parse(data);
             return globalForDB.dbMemory;
         } catch (e) {
-            console.error('Failed to parse DB', e);
+            if (e instanceof Error) {
+                console.error('Failed to parse DB:', e.message);
+            } else {
+                console.error('Failed to parse DB:', e);
+            }
         }
     }
 

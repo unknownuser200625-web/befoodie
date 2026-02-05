@@ -33,6 +33,11 @@ export async function GET(
             }
         } catch (e) {
             // Invalid token
+            if (e instanceof Error) {
+                console.error('Auth check failed:', e.message);
+            } else {
+                console.error('Auth check failed:', e);
+            }
         }
     }
 

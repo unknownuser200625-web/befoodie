@@ -74,6 +74,9 @@ app.prepare().then(() => {
             try {
                 return jwt.verify(token, JWT_SECRET) as { role: string };
             } catch (e) {
+                if (e instanceof Error) {
+                    // console.debug('JWT Verify failed:', e.message);
+                }
                 return null;
             }
         };
@@ -111,6 +114,11 @@ app.prepare().then(() => {
                     res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ success: true, categories: db.categories }));
                 } catch (e) {
+                    if (e instanceof Error) {
+                        console.error('Category creation error:', e.message);
+                    } else {
+                        console.error('Category creation error:', e);
+                    }
                     res.statusCode = 400;
                     res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ error: 'Failed' }));
@@ -152,6 +160,11 @@ app.prepare().then(() => {
                         res.end(JSON.stringify({ error: 'Not found' }));
                     }
                 } catch (e) {
+                    if (e instanceof Error) {
+                        console.error('Category rename error:', e.message);
+                    } else {
+                        console.error('Category rename error:', e);
+                    }
                     res.statusCode = 500;
                     res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ error: 'System error' }));
@@ -249,7 +262,11 @@ app.prepare().then(() => {
                 res.setHeader('Content-Type', 'application/json');
                 res.end(JSON.stringify({ success: true, newDate: newSessionId }));
             } catch (e) {
-                console.error('Reset error', e);
+                if (e instanceof Error) {
+                    console.error('Reset error:', e.message);
+                } else {
+                    console.error('Reset error:', e);
+                }
                 res.statusCode = 500;
                 res.setHeader('Content-Type', 'application/json');
                 res.end(JSON.stringify({ error: 'Reset failed' }));
@@ -315,6 +332,11 @@ app.prepare().then(() => {
                         res.end(JSON.stringify({ error: 'Table session not found' }));
                     }
                 } catch (e) {
+                    if (e instanceof Error) {
+                        console.error('Payment failed:', e.message);
+                    } else {
+                        console.error('Payment failed:', e);
+                    }
                     res.statusCode = 500;
                     res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ error: 'Payment failed' }));
@@ -351,6 +373,11 @@ app.prepare().then(() => {
                         res.end(JSON.stringify({ error: 'Order not found' }));
                     }
                 } catch (e) {
+                    if (e instanceof Error) {
+                        console.error('Update failed:', e.message);
+                    } else {
+                        console.error('Update failed:', e);
+                    }
                     res.statusCode = 500;
                     res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ error: 'Update failed' }));
@@ -408,7 +435,11 @@ app.prepare().then(() => {
                     res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify(newOrder));
                 } catch (e) {
-                    console.error('API: Order Error', e);
+                    if (e instanceof Error) {
+                        console.error('Order creation error:', e.message);
+                    } else {
+                        console.error('Order creation error:', e);
+                    }
                     res.statusCode = 500;
                     res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ error: 'Order creation failed' }));
@@ -444,6 +475,11 @@ app.prepare().then(() => {
                         res.end(JSON.stringify({ error: 'Not found' }));
                     }
                 } catch (e) {
+                    if (e instanceof Error) {
+                        console.error('Product toggle error:', e.message);
+                    } else {
+                        console.error('Product toggle error:', e);
+                    }
                     res.statusCode = 500;
                     res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ error: 'Error' }));
@@ -475,6 +511,11 @@ app.prepare().then(() => {
                     res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify(newProduct));
                 } catch (e) {
+                    if (e instanceof Error) {
+                        console.error('Product creation error:', e.message);
+                    } else {
+                        console.error('Product creation error:', e);
+                    }
                     res.statusCode = 500;
                     res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ error: 'Error' }));
@@ -510,6 +551,11 @@ app.prepare().then(() => {
                         res.end(JSON.stringify({ error: 'Not found' }));
                     }
                 } catch (e) {
+                    if (e instanceof Error) {
+                        console.error('Product update error:', e.message);
+                    } else {
+                        console.error('Product update error:', e);
+                    }
                     res.statusCode = 500;
                     res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ error: 'Error' }));

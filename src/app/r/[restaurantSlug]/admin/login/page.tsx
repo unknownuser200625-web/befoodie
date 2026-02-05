@@ -81,8 +81,13 @@ export default function LoginPage() {
                 setError(result.data?.error || result.error || 'Login failed');
             }
         } catch (err) {
-            setError('An unexpected error occurred.');
-        } finally {
+            if (err instanceof Error) {
+                setError(`An unexpected error occurred: ${err.message}`);
+            } else {
+                setError('An unexpected error occurred.');
+            }
+        }
+        finally {
             setLoading(false);
         }
     };
