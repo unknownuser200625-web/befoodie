@@ -15,7 +15,10 @@ export async function GET(
             .eq('slug', restaurantSlug)
             .single();
 
+        console.log('[SESSION-STATUS] Restaurant lookup:', { restaurantSlug, found: !!restaurant });
+
         if (resError || !restaurant) {
+            console.error('[SESSION-STATUS] Restaurant not found:', resError);
             return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
         }
 
@@ -31,14 +34,21 @@ export async function GET(
             .limit(1)
             .maybeSingle();
 
-        if (sessError) throw sessError;
+        if (sessError) {
+            console.error('[SESSION-STATUS] Session query error:', sessError);
+            throw sessError;
+        }
 
-        return NextResponse.json({
+        const response = {
             isOpen: !!session,
             isAcceptingOrders: restaurant.is_accepting_orders,
             businessDate: session?.business_date || today,
             operationalSessionId: session?.id || null
-        });
+        };
+
+        console.log('[SESSION-STATUS] Response:', response);
+
+        return NextResponse.json(response);
     } catch (error) {
         console.error('Session status error', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

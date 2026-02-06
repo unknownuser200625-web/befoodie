@@ -17,7 +17,10 @@ export async function GET(
             .eq('slug', restaurantSlug)
             .single();
 
+        console.log('[ORDERS GET] Restaurant lookup:', { restaurantSlug, found: !!restaurant });
+
         if (resError || !restaurant) {
+            console.error('[ORDERS GET] Restaurant not found:', resError);
             return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
         }
 
@@ -31,9 +34,15 @@ export async function GET(
             .eq('status', 'active')
             .maybeSingle();
 
-        if (opsError) throw opsError;
+        console.log('[ORDERS GET] Operational session lookup:', { today, sessionId: opsSession?.id });
+
+        if (opsError) {
+            console.error('[ORDERS GET] Session query error:', opsError);
+            throw opsError;
+        }
 
         if (!opsSession) {
+            console.log('[ORDERS GET] No active session - returning empty array');
             return NextResponse.json([]); // No active session, no orders to show for today
         }
 
@@ -56,10 +65,13 @@ export async function GET(
             totalPrice: ord.total_price,
         }));
 
+        console.log('[ORDERS GET] Fetched orders count:', orders?.length || 0);
+
         return NextResponse.json(mappedOrders);
     } catch (error) {
-        console.error('Orders GET error', error);
-        return NextResponse.json({ error: 'Failed' }, { status: 500 });
+        console.error('[ORDERS GET] Critical error:', error);
+        // NEVER throw 500 on empty state - return empty array instead
+        return NextResponse.json([]);
     }
 }
 

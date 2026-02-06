@@ -4,7 +4,7 @@ import { Header } from '@/components/ui/Header';
 import { Order, OrderStatus, Restaurant } from '@/types';
 import { useEffect, useState, useRef, use } from 'react';
 import { Utensils, Clock, CheckCircle, Flame, Bell, BellOff, LogOut, LayoutDashboard, WifiOff, AlertCircle } from 'lucide-react';
-import { io } from 'socket.io-client';
+// import { io } from 'socket.io-client'; // DISABLED - Causing false CONNECTION LOST
 import { formatOrderTime, getOrderUrgency, getUrgencyStyles } from '@/lib/timeFormatter';
 import { LiveStatus } from '@/components/ui/LiveStatus';
 import { SafeErrorBoundary } from '@/components/ui/SafeErrorBoundary';
@@ -110,8 +110,10 @@ export default function KitchenPage({
         fetchSessionId();
         fetchOrders();
 
+        // Polling only - socket.io temporarily disabled for stability
         const pollInterval = setInterval(fetchOrders, 10000);
 
+        /* SOCKET.IO DISABLED - Causing false CONNECTION LOST errors
         const socket = io({
             query: { restaurantSlug }
         });
@@ -134,9 +136,10 @@ export default function KitchenPage({
             setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
             cache.current.orders = cache.current.orders.map(o => o.id === updated.id ? updated : o);
         });
+        */
 
         return () => {
-            socket.disconnect();
+            // socket.disconnect();
             clearInterval(pollInterval);
         };
     }, [restaurantSlug]);

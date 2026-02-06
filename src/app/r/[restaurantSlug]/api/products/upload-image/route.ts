@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { createClient } from "@supabase/supabase-js";
 
+// Force Node.js runtime for Buffer support
+export const runtime = 'nodejs';
+
 // Initialize Supabase client with service role for storage operations
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,6 +24,8 @@ export async function POST(
     try {
         const { restaurantSlug } = await params;
 
+        console.log('[IMAGE-UPLOAD] Starting upload for restaurant:', restaurantSlug);
+
         // Get restaurant ID
         const { data: restaurant, error: resError } = await supabase
             .from('restaurants')
@@ -29,6 +34,7 @@ export async function POST(
             .single();
 
         if (resError || !restaurant) {
+            console.error('[IMAGE-UPLOAD] Restaurant not found:', resError);
             return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
         }
 
@@ -54,6 +60,8 @@ export async function POST(
         const ext = image.name.split('.').pop();
         const filename = `${restaurant.id}/${timestamp}.${ext}`;
 
+        console.log('[IMAGE-UPLOAD] Uploading file:', filename);
+
         // Convert File to ArrayBuffer then to Buffer
         const arrayBuffer = await image.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
@@ -67,7 +75,7 @@ export async function POST(
             });
 
         if (uploadError) {
-            console.error('Upload error:', uploadError);
+            console.error('[IMAGE-UPLOAD] Upload error:', uploadError);
             return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 });
         }
 
@@ -76,9 +84,11 @@ export async function POST(
             .from('product-images')
             .getPublicUrl(filename);
 
+        console.log('[IMAGE-UPLOAD] Upload successful:', urlData.publicUrl);
+
         return NextResponse.json({ imageUrl: urlData.publicUrl });
     } catch (error) {
-        console.error('Image upload error:', error);
+        console.error('[IMAGE-UPLOAD] Critical error:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

@@ -69,6 +69,7 @@ export async function POST(
         let operationalSessionId = existingSess?.id;
 
         if (!existingSess) {
+            console.log('[START-NEW-DAY] Creating new operational session for:', today);
             // Start fresh session for the day
             const { data: newSess, error: createError } = await supabase
                 .from('restaurant_operational_sessions')
@@ -80,16 +81,26 @@ export async function POST(
                 .select('id')
                 .single();
 
-            if (createError) throw createError;
+            if (createError) {
+                console.error('[START-NEW-DAY] Failed to create session:', createError);
+                throw createError;
+            }
             operationalSessionId = newSess.id;
+            console.log('[START-NEW-DAY] Created session:', operationalSessionId);
         } else if (existingSess.status === 'closed') {
+            console.log('[START-NEW-DAY] Re-opening closed session:', existingSess.id);
             // Re-open if closed (Operational preference: Usually we just reactivate or create new if schema allowed)
             const { error: openError } = await supabase
                 .from('restaurant_operational_sessions')
                 .update({ status: 'active', closed_at: null })
                 .eq('id', existingSess.id);
 
-            if (openError) throw openError;
+            if (openError) {
+                console.error('[START-NEW-DAY] Failed to re-open session:', openError);
+                throw openError;
+            }
+        } else {
+            console.log('[START-NEW-DAY] Session already active:', existingSess.id);
         }
 
         // 3. LEGACY COMPATIBILITY: Update is_system_open
@@ -97,6 +108,8 @@ export async function POST(
             .from('restaurants')
             .update({ is_system_open: true })
             .eq('id', restaurant.id);
+
+        console.log('[START-NEW-DAY] Session started successfully:', operationalSessionId);
 
         return NextResponse.json({
             success: true,
