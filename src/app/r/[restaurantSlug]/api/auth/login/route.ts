@@ -65,6 +65,26 @@ export async function POST(
         }
 
         if (authenticatedRole) {
+            // --- POS SESSION REFACTOR: Staff Login Guard ---
+            if (authenticatedRole === 'staff') {
+                const today = new Date().toISOString().split('T')[0];
+                const { data: opsSession, error: opsError } = await supabase
+                    .from('restaurant_operational_sessions')
+                    .select('id')
+                    .eq('restaurant_id', restaurant.id)
+                    .eq('business_date', today)
+                    .eq('status', 'active')
+                    .maybeSingle();
+
+                if (opsError || !opsSession) {
+                    if (AUTH_DEBUG) console.log(`[TRACE] Staff login BLOCKED: No active operational session for today.`);
+                    return NextResponse.json(
+                        { success: false, error: "SYSTEM CLOSED: No active business session found." },
+                        { status: 403 }
+                    );
+                }
+            }
+
             // --- Phase 2: Device Session Creation ---
             const userAgent = req.headers.get('user-agent') || 'Unknown';
             const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || '0.0.0.0';

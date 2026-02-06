@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { Header } from '@/components/ui/Header';
 import { Footer } from '@/components/ui/Footer';
-import { LayoutDashboard, UtensilsCrossed, Package, Tag, Receipt, CheckCircle, Clock, X, Flame, Shield } from 'lucide-react';
+import { LayoutDashboard, UtensilsCrossed, Package, Tag, Receipt, CheckCircle, Clock, X, Flame, Shield, QrCode } from 'lucide-react';
 import { useEffect, useState, use } from 'react';
 import { io } from 'socket.io-client';
 import { TableSession, Order, Restaurant } from '@/types';
+import { LiveStatus } from '@/components/ui/LiveStatus';
 
 export default function AdminHub({
     params,
@@ -121,6 +122,7 @@ export default function AdminHub({
                         <LayoutDashboard className="text-primary w-10 h-10" />
                         ADMIN HUB
                         <span className="text-[10px] font-black bg-white/5 border border-white/10 px-2 py-1 rounded text-primary uppercase ml-2 italic">MASTER</span>
+                        <LiveStatus />
                     </h1>
                     <button
                         onClick={async () => {
@@ -172,6 +174,16 @@ export default function AdminHub({
                         <div>
                             <h2 className="text-xl font-bold">Security</h2>
                             <p className="text-xs text-gray-500">Master Password & PIN</p>
+                        </div>
+                    </Link>
+
+                    <Link href={`/r/${restaurantSlug}/admin/qr`} className="bg-[#181818] p-6 rounded-2xl border border-white/5 hover:border-cyan-500/50 transition-all flex items-center gap-4 group">
+                        <div className="p-4 bg-cyan-500/20 rounded-xl text-cyan-400">
+                            <QrCode size={28} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold">QR Codes</h2>
+                            <p className="text-xs text-gray-500">Table & Menu Links</p>
                         </div>
                     </Link>
                 </div>

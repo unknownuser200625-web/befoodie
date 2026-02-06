@@ -27,7 +27,8 @@ export default function ProductManagerPage({
         price: 0,
         category: 'Veg Burger',
         image: '',
-        available: true
+        available: true,
+        food_type: 'veg'
     });
 
     useEffect(() => {
@@ -201,6 +202,26 @@ export default function ProductManagerPage({
                                         onChange={e => setFormData({ ...formData, image: e.target.value || '' })}
                                         className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg p-3 focus:border-primary outline-none"
                                     />
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-gray-400 mb-1">Dietary Type</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {(['veg', 'non-veg', 'egg'] as const).map(type => (
+                                            <button
+                                                key={type}
+                                                type="button"
+                                                onClick={() => setFormData({ ...formData, food_type: type })}
+                                                className={`py-2 rounded-lg text-sm font-bold uppercase transition-all ${formData.food_type === type
+                                                    ? type === 'veg' ? 'bg-green-500/20 text-green-500 border border-green-500/50'
+                                                        : type === 'non-veg' ? 'bg-red-500/20 text-red-500 border border-red-500/50'
+                                                            : 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50'
+                                                    : 'bg-white/5 text-gray-500 border border-white/10 hover:bg-white/10'
+                                                    }`}
+                                            >
+                                                {type}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-2 py-2">
                                     <input

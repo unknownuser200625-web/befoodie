@@ -19,6 +19,7 @@ export interface Product {
     category: string;
     image: string;
     available: boolean;
+    food_type?: 'veg' | 'non-veg' | 'egg';
 }
 
 export interface CartItem extends Product {

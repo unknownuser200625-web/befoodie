@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { OrderStatus } from "@/types";
+import { getOrCreateTableSession } from "@/lib/services/table-session.service";
 
 export async function GET(
     request: Request,
@@ -9,6 +10,7 @@ export async function GET(
     try {
         const { restaurantSlug } = await params;
 
+        // 1. Resolve Restaurant
         const { data: restaurant, error: resError } = await supabase
             .from('restaurants')
             .select('id')
@@ -19,10 +21,28 @@ export async function GET(
             return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
         }
 
+        // 2. Resolve Active Operational Session
+        const today = new Date().toISOString().split('T')[0];
+        const { data: opsSession, error: opsError } = await supabase
+            .from('restaurant_operational_sessions')
+            .select('id')
+            .eq('restaurant_id', restaurant.id)
+            .eq('business_date', today)
+            .eq('status', 'active')
+            .maybeSingle();
+
+        if (opsError) throw opsError;
+
+        if (!opsSession) {
+            return NextResponse.json([]); // No active session, no orders to show for today
+        }
+
+        // 3. Fetch Orders linked to this operational session via table_sessions
         const { data: orders, error } = await supabase
             .from('orders')
-            .select('*, order_items(*)')
+            .select('*, order_items(*), table_sessions!inner(operational_session_id)')
             .eq('restaurant_id', restaurant.id)
+            .eq('table_sessions.operational_session_id', opsSession.id)
             .order('timestamp', { ascending: false });
 
         if (error) throw error;
@@ -31,7 +51,7 @@ export async function GET(
         const mappedOrders = orders.map(ord => ({
             ...ord,
             items: ord.order_items,
-            sessionId: ord.session_id,
+            tableSessionId: ord.table_session_id,
             tableId: ord.table_id,
             totalPrice: ord.total_price,
         }));
@@ -50,7 +70,7 @@ export async function POST(
     try {
         const { restaurantSlug } = await params;
         const body = await request.json();
-        const { tableId, items, totalPrice, sessionId } = body;
+        const { tableId, items, totalPrice } = body;
 
         const { data: restaurant, error: resError } = await supabase
             .from('restaurants')
@@ -62,12 +82,20 @@ export async function POST(
             return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
         }
 
-        // 1. Create Order
+        // 1. Resolve Table Session (Ensures active operational session exists)
+        let tableSessionId;
+        try {
+            tableSessionId = await getOrCreateTableSession(restaurant.id, tableId);
+        } catch (e: any) {
+            return NextResponse.json({ error: e.message || "Session error" }, { status: 403 });
+        }
+
+        // 2. Create Order
         const { data: order, error: orderError } = await supabase
             .from('orders')
             .insert({
                 restaurant_id: restaurant.id,
-                session_id: sessionId || null,
+                table_session_id: tableSessionId,
                 table_id: tableId,
                 total_price: totalPrice,
                 status: 'Pending',
@@ -78,7 +106,7 @@ export async function POST(
 
         if (orderError) throw orderError;
 
-        // 2. Create Order Items
+        // 3. Create Order Items
         const orderItems = items.map((item: any) => ({
             order_id: order.id,
             name: item.name,
@@ -98,9 +126,9 @@ export async function POST(
             io.to(restaurantSlug).emit('new_order', {
                 ...order,
                 items,
-                sessionId,
                 tableId,
-                totalPrice
+                totalPrice,
+                tableSessionId
             });
         }
 

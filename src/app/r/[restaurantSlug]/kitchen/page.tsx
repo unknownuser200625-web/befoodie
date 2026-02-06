@@ -6,6 +6,7 @@ import { useEffect, useState, useRef, use } from 'react';
 import { Utensils, Clock, CheckCircle, Flame, Bell, BellOff, LogOut, LayoutDashboard } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { formatOrderTime, getOrderUrgency, getUrgencyStyles } from '@/lib/timeFormatter';
+import { LiveStatus } from '@/components/ui/LiveStatus';
 
 export default function KitchenPage({
     params,
@@ -152,6 +153,7 @@ export default function KitchenPage({
                             <Utensils className="text-primary w-10 h-10" />
                             KITCHEN VIEW
                         </h1>
+                        <LiveStatus />
                         <span className="text-[10px] font-black bg-white/5 border border-white/10 px-2 py-1 rounded text-primary uppercase">
                             {role === 'owner' ? 'MASTER' : 'STAFF'}
                         </span>

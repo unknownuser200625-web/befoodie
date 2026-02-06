@@ -1,6 +1,7 @@
 import { Product } from '@/types';
 import { Plus } from 'lucide-react';
 import Image from 'next/image';
+import { FoodTypeIcon } from '@/components/ui/FoodTypeIcon';
 
 interface ProductCardProps {
     product: Product;
@@ -24,9 +25,12 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
             {/* Content Section */}
             <div className="p-3 md:p-4 flex flex-col justify-between flex-1 relative">
                 <div>
-                    <h3 className="font-bold text-white text-base md:text-lg leading-tight line-clamp-1">
-                        {product.name}
-                    </h3>
+                    <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-bold text-white text-base md:text-lg leading-tight line-clamp-1">
+                            {product.name}
+                        </h3>
+                        <FoodTypeIcon type={product.food_type} />
+                    </div>
                     <p className="text-gray-400 text-xs md:text-sm mt-1 line-clamp-2">
                         {product.description}
                     </p>

@@ -18,21 +18,22 @@ export async function GET(
             return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
         }
 
-        const { data: history, error } = await supabase
-            .from('history')
+        const { data: summary, error } = await supabase
+            .from('restaurant_daily_summary')
             .select('*')
             .eq('restaurant_id', restaurant.id)
-            .order('date', { ascending: false });
+            .order('business_date', { ascending: false });
 
         if (error) throw error;
 
         // Map snake_case to camelCase
-        const mappedHistory = history.map(h => ({
-            ...h,
+        const mappedHistory = summary.map(h => ({
+            id: h.id,
+            date: h.business_date, // Map business_date to date for frontend compatibility
             totalOrders: h.total_orders,
             totalRevenue: h.total_revenue,
             closedAt: h.closed_at,
-            orders: [], // Deep historical data would need separate fetch per day if requested
+            orders: [],
             sessions: []
         }));
 

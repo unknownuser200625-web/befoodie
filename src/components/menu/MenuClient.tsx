@@ -9,6 +9,7 @@ import { useCart } from '@/context/CartContext';
 import { CartDrawer } from '@/components/cart/CartDrawer';
 import { Header } from '@/components/ui/Header';
 import { Footer } from '@/components/ui/Footer';
+import { LiveStatus } from '@/components/ui/LiveStatus';
 
 export default function MenuClient({
     tableId,
@@ -83,63 +84,104 @@ export default function MenuClient({
 
     const displayCategories = activeCategory === 'All' ? categories : [activeCategory];
 
+    // Session Status Guard
+    const [isSystemOpen, setIsSystemOpen] = useState(true);
+
+    useEffect(() => {
+        const checkStatus = async () => {
+            try {
+                const res = await fetch(`/r/${restaurantSlug}/api/restaurant/session-status`);
+                const data = await res.json();
+                setIsSystemOpen(data.isOpen);
+            } catch (e) {
+                console.error("Status fetch failed", e);
+            }
+        };
+        checkStatus();
+        const interval = setInterval(checkStatus, 30000);
+        return () => clearInterval(interval);
+    }, [restaurantSlug]);
+
     return (
-        <div className="pb-32 bg-[#0a0a0a] min-h-screen text-white">
+        <div className="pb-32 bg-[#0a0a0a] min-h-screen text-white relative">
             <Header restaurantName={restaurant?.name} restaurantSlug={restaurantSlug} />
 
-            <div className="pt-24 px-6 mb-8 max-w-4xl mx-auto">
-                <div className="relative group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={20} />
-                    <input
-                        type="text"
-                        placeholder="What would you like to eat?"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-primary/50 focus:bg-white/[0.08] transition-all text-lg"
-                    />
+            {/* Global Session Guard Overlay */}
+            {!isSystemOpen && (
+                <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+                    <div className="bg-[#181818] border border-white/10 p-8 rounded-3xl text-center max-w-md w-full shadow-2xl">
+                        <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500">
+                            <LiveStatus />
+                        </div>
+                        <h2 className="text-3xl font-black mb-2 uppercase italic text-white">Restaurant Closed</h2>
+                        <p className="text-gray-400 mb-8">We are currently not accepting new orders. Please check back later.</p>
+                        <div className="relative h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                            <div className="absolute inset-y-0 left-0 w-1/3 bg-white/20 animate-subtle-pulse rounded-full" />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <div className={`transition-opacity duration-500 ${!isSystemOpen ? 'opacity-20 pointer-events-none select-none' : ''}`}>
+                <div className="pt-24 px-6 mb-8 max-w-4xl mx-auto">
+                    <div className="flex justify-end mb-4">
+                        <LiveStatus />
+                    </div>
+                    {/* ... rest of the content ... */}
+                    <div className="relative group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={20} />
+                        <input
+                            type="text"
+                            placeholder="What would you like to eat?"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            disabled={!isSystemOpen}
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-primary/50 focus:bg-white/[0.08] transition-all text-lg"
+                        />
+                    </div>
+                </div>
+
+                <div className="px-6 mb-10 overflow-x-auto no-scrollbar flex gap-3 max-w-4xl mx-auto">
+                    <button
+                        onClick={() => setActiveCategory('All')}
+                        className={`px-6 py-2.5 rounded-full font-bold whitespace-nowrap transition-all ${activeCategory === 'All' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+                    >
+                        All
+                    </button>
+                    {categories.map(cat => (
+                        <button
+                            key={cat}
+                            onClick={() => setActiveCategory(cat)}
+                            className={`px-6 py-2.5 rounded-full font-bold whitespace-nowrap transition-all ${activeCategory === cat ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+                        >
+                            {cat}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="px-6 space-y-12 max-w-6xl mx-auto">
+                    {displayCategories.map(cat => {
+                        const catProducts = filteredProducts.filter(p => p.category === cat);
+                        if (catProducts.length === 0) return null;
+                        return (
+                            <section key={cat}>
+                                <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                                    <Tag className="text-primary" size={20} />
+                                    {cat}
+                                    <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent"></div>
+                                </h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {catProducts.map(product => (
+                                        <ProductCard key={product.id} product={product} onAdd={addToCart} />
+                                    ))}
+                                </div>
+                            </section>
+                        );
+                    })}
                 </div>
             </div>
 
-            <div className="px-6 mb-10 overflow-x-auto no-scrollbar flex gap-3 max-w-4xl mx-auto">
-                <button
-                    onClick={() => setActiveCategory('All')}
-                    className={`px-6 py-2.5 rounded-full font-bold whitespace-nowrap transition-all ${activeCategory === 'All' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-                >
-                    All
-                </button>
-                {categories.map(cat => (
-                    <button
-                        key={cat}
-                        onClick={() => setActiveCategory(cat)}
-                        className={`px-6 py-2.5 rounded-full font-bold whitespace-nowrap transition-all ${activeCategory === cat ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-                    >
-                        {cat}
-                    </button>
-                ))}
-            </div>
-
-            <div className="px-6 space-y-12 max-w-6xl mx-auto">
-                {displayCategories.map(cat => {
-                    const catProducts = filteredProducts.filter(p => p.category === cat);
-                    if (catProducts.length === 0) return null;
-                    return (
-                        <section key={cat}>
-                            <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                                <Tag className="text-primary" size={20} />
-                                {cat}
-                                <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent"></div>
-                            </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {catProducts.map(product => (
-                                    <ProductCard key={product.id} product={product} onAdd={addToCart} />
-                                ))}
-                            </div>
-                        </section>
-                    );
-                })}
-            </div>
-
-            {totalItems > 0 && (
+            {totalItems > 0 && isSystemOpen && (
                 <button
                     onClick={() => setIsCartOpen(true)}
                     className="fixed bottom-8 right-8 bg-primary text-white p-5 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all z-50 flex items-center gap-3"
