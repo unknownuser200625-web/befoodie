@@ -67,13 +67,12 @@ export async function POST(
         if (authenticatedRole) {
             // --- POS SESSION REFACTOR: Staff Login Guard ---
             if (authenticatedRole === 'staff') {
-                const today = new Date().toISOString().split('T')[0];
                 const { data: opsSession, error: opsError } = await supabase
                     .from('restaurant_operational_sessions')
                     .select('id')
                     .eq('restaurant_id', restaurant.id)
-                    .eq('business_date', today)
                     .eq('status', 'active')
+                    .limit(1)
                     .maybeSingle();
 
                 if (opsError || !opsSession) {

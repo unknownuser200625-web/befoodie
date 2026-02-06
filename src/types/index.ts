@@ -7,6 +7,8 @@ export interface Restaurant {
     owner_password_hash: string;
     staff_pin_hash: string;
     active_session_id?: string;
+    is_accepting_orders: boolean;
+    is_system_open: boolean;
     created_at: number;
 }
 

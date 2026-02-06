@@ -122,7 +122,6 @@ export default function AdminHub({
                         <LayoutDashboard className="text-primary w-10 h-10" />
                         ADMIN HUB
                         <span className="text-[10px] font-black bg-white/5 border border-white/10 px-2 py-1 rounded text-primary uppercase ml-2 italic">MASTER</span>
-                        <LiveStatus />
                     </h1>
                     <button
                         onClick={async () => {
@@ -188,33 +187,69 @@ export default function AdminHub({
                     </Link>
                 </div>
 
-                {/* Day Management */}
-                <div className="bg-primary/5 border border-primary/20 rounded-3xl p-8 mb-16 flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div>
-                        <div className="flex items-center gap-2 text-primary font-bold mb-1 uppercase tracking-widest text-xs">
-                            <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-                            Live Business Date
+                {/* Day Management & Hard Controls */}
+                <div className="bg-primary/5 border border-primary/20 rounded-3xl p-8 mb-16">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                        <div>
+                            <div className="flex items-center gap-2 text-primary font-bold mb-1 uppercase tracking-widest text-xs">
+                                <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                                Live Business Date
+                            </div>
+                            <h2 className="text-4xl font-black">{new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</h2>
+                            <p className="text-gray-500 text-sm mt-1">Sessions and orders are tracked per business day.</p>
                         </div>
-                        <h2 className="text-4xl font-black">{new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</h2>
-                        <p className="text-gray-500 text-sm mt-1">Sessions and orders are tracked per business day.</p>
+
+                        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                            {/* Pause Orders Toggle */}
+                            <button
+                                onClick={async () => {
+                                    const nextState = !restaurant?.is_accepting_orders;
+                                    const res = await fetch(`/r/${restaurantSlug}/api/admin/pause-orders`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ isAcceptingOrders: nextState })
+                                    });
+                                    if (res.ok) {
+                                        setRestaurant(prev => prev ? { ...prev, is_accepting_orders: nextState } : null);
+                                    }
+                                }}
+                                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 rounded-2xl font-bold transition-all border ${restaurant?.is_accepting_orders
+                                    ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20'
+                                    : 'bg-emerald-500 text-black border-emerald-500 shadow-lg shadow-emerald-500/20'
+                                    }`}
+                            >
+                                <Flame size={20} className={restaurant?.is_accepting_orders ? '' : 'animate-pulse'} />
+                                {restaurant?.is_accepting_orders ? 'PAUSE ORDERS' : 'RESUME ORDERS'}
+                            </button>
+
+                            <Link href={`/r/${restaurantSlug}/admin/history`} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white px-6 py-4 rounded-2xl font-bold transition-all border border-white/10">
+                                <Clock size={20} /> History
+                            </Link>
+
+                            <button
+                                onClick={async () => {
+                                    if (confirm('CLOSE BUSINESS DAY?\n\nThis will:\n1. Settlement: Aggregates all paid orders\n2. Security: Logouts all staff devices\n3. Finality: Archive data to History\n4. NEW: Reset operational status to CLOSED\n\nARE YOU SURE?')) {
+                                        const res = await fetch(`/r/${restaurantSlug}/api/admin/close-day`, { method: 'POST' });
+                                        if (res.ok) {
+                                            alert("Day Closed Successfully. Redirecting to History.");
+                                            window.location.href = `/r/${restaurantSlug}/admin/history`;
+                                        }
+                                    }
+                                }}
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-8 py-4 rounded-2xl font-black transition-all shadow-xl shadow-rose-950/20 border border-rose-500/50"
+                            >
+                                <CheckCircle size={20} /> CLOSE DAY
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="flex gap-4">
-                        <Link href={`/r/${restaurantSlug}/admin/history`} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-white px-6 py-4 rounded-2xl font-bold transition-all border border-white/10">
-                            <Clock size={20} /> Order History
-                        </Link>
-                        <button
-                            onClick={async () => {
-                                if (confirm('START NEW DAY?\n\nThis will:\n1. Close ALL active tables\n2. Archive today\'s revenue to History\n3. Reset the dashboard for a fresh start.\n\nARE YOU SURE?')) {
-                                    const res = await fetch(`/r/${restaurantSlug}/api/admin/start-new-day`, { method: 'POST' });
-                                    if (res.ok) window.location.reload();
-                                }
-                            }}
-                            className="flex items-center gap-2 bg-primary hover:bg-red-700 text-white px-8 py-4 rounded-2xl font-black transition-all shadow-xl shadow-red-950/20"
-                        >
-                            <Flame size={20} className="animate-bounce" /> START NEW DAY
-                        </button>
-                    </div>
+                    {/* Quick Warning if Paused */}
+                    {!restaurant?.is_accepting_orders && (
+                        <div className="mt-6 p-4 bg-amber-500/20 border border-amber-500/30 rounded-2xl flex items-center gap-3 text-amber-500">
+                            <Flame size={18} className="shrink-0" />
+                            <p className="text-sm font-bold">ORDERS ARE CURRENTLY PAUSED. Customers will see a "Temporarily Unavailable" message on the menu.</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Session Dashboard */}

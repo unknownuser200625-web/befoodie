@@ -86,6 +86,7 @@ export default function MenuClient({
 
     // Session Status Guard
     const [isSystemOpen, setIsSystemOpen] = useState(true);
+    const [isAcceptingOrders, setIsAcceptingOrders] = useState(true);
 
     useEffect(() => {
         const checkStatus = async () => {
@@ -93,36 +94,45 @@ export default function MenuClient({
                 const res = await fetch(`/r/${restaurantSlug}/api/restaurant/session-status`);
                 const data = await res.json();
                 setIsSystemOpen(data.isOpen);
+                setIsAcceptingOrders(data.isAcceptingOrders);
             } catch (e) {
                 console.error("Status fetch failed", e);
             }
         };
         checkStatus();
-        const interval = setInterval(checkStatus, 30000);
+        const interval = setInterval(checkStatus, 20000);
         return () => clearInterval(interval);
     }, [restaurantSlug]);
+
+    const showOverlay = !isSystemOpen || !isAcceptingOrders;
 
     return (
         <div className="pb-32 bg-[#0a0a0a] min-h-screen text-white relative">
             <Header restaurantName={restaurant?.name} restaurantSlug={restaurantSlug} />
 
             {/* Global Session Guard Overlay */}
-            {!isSystemOpen && (
+            {showOverlay && (
                 <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
                     <div className="bg-[#181818] border border-white/10 p-8 rounded-3xl text-center max-w-md w-full shadow-2xl">
-                        <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500">
+                        <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-6 text-primary">
                             <LiveStatus />
                         </div>
-                        <h2 className="text-3xl font-black mb-2 uppercase italic text-white">Restaurant Closed</h2>
-                        <p className="text-gray-400 mb-8">We are currently not accepting new orders. Please check back later.</p>
+                        <h2 className="text-3xl font-black mb-2 uppercase italic text-white">
+                            {!isSystemOpen ? 'Restaurant Closed' : 'Orders Paused'}
+                        </h2>
+                        <p className="text-gray-400 mb-8">
+                            {!isSystemOpen
+                                ? "We are currently not accepting new orders. Please check back later."
+                                : "We are temporarily not accepting small orders. Kitchen is catching up!"}
+                        </p>
                         <div className="relative h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                            <div className="absolute inset-y-0 left-0 w-1/3 bg-white/20 animate-subtle-pulse rounded-full" />
+                            <div className="absolute inset-y-0 left-0 w-1/3 bg-primary/30 animate-pulse rounded-full" />
                         </div>
                     </div>
                 </div>
             )}
 
-            <div className={`transition-opacity duration-500 ${!isSystemOpen ? 'opacity-20 pointer-events-none select-none' : ''}`}>
+            <div className={`transition-opacity duration-500 ${showOverlay ? 'opacity-20 pointer-events-none select-none' : ''}`}>
                 <div className="pt-24 px-6 mb-8 max-w-4xl mx-auto">
                     <div className="flex justify-end mb-4">
                         <LiveStatus />

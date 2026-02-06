@@ -11,7 +11,7 @@ export async function GET(
         // 1. Resolve Restaurant
         const { data: restaurant, error: resError } = await supabase
             .from('restaurants')
-            .select('id')
+            .select('id, is_accepting_orders')
             .eq('slug', restaurantSlug)
             .single();
 
@@ -21,21 +21,23 @@ export async function GET(
 
         const today = new Date().toISOString().split('T')[0];
 
-        // 2. Fetch Active Operational Session
+        // 2. Fetch Active Operational Session (Ignore date-strictness to prevent timezone sync issues)
         const { data: session, error: sessError } = await supabase
             .from('restaurant_operational_sessions')
             .select('*')
             .eq('restaurant_id', restaurant.id)
-            .eq('business_date', today)
             .eq('status', 'active')
+            .order('created_at', { ascending: false })
+            .limit(1)
             .maybeSingle();
 
         if (sessError) throw sessError;
 
         return NextResponse.json({
             isOpen: !!session,
-            businessDate: today,
-            sessionId: session?.id || null
+            isAcceptingOrders: restaurant.is_accepting_orders,
+            businessDate: session?.business_date || today,
+            operationalSessionId: session?.id || null
         });
     } catch (error) {
         console.error('Session status error', error);
