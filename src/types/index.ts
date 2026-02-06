@@ -1,4 +1,6 @@
 
+export type FoodPolicy = 'PURE_VEG' | 'PURE_NON_VEG' | 'MIXED';
+
 export interface Restaurant {
     id: string;
     name: string;
@@ -9,6 +11,7 @@ export interface Restaurant {
     active_session_id?: string;
     is_accepting_orders: boolean;
     is_system_open: boolean;
+    food_policy: FoodPolicy;
     created_at: number;
 }
 

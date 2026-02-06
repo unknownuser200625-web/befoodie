@@ -1,31 +1,41 @@
 import React from 'react';
 
-export const FoodTypeIcon = ({ type }: { type?: 'veg' | 'non-veg' | 'egg' }) => {
-    if (!type) return null;
+interface FoodTypeIconProps {
+    type?: 'veg' | 'non-veg' | 'egg';
+    size?: 'sm' | 'md' | 'lg';
+}
 
-    if (type === 'veg') {
-        return (
-            <div className="w-4 h-4 border border-green-600 p-[2px] flex items-center justify-center rounded-[2px]" title="Vegetarian">
-                <div className="w-2 h-2 bg-green-600 rounded-full" />
-            </div>
-        );
-    }
+export function FoodTypeIcon({ type = 'veg', size = 'md' }: FoodTypeIconProps) {
+    const sizeClasses = {
+        sm: 'w-4 h-4',
+        md: 'w-5 h-5',
+        lg: 'w-6 h-6'
+    };
 
-    if (type === 'non-veg') {
-        return (
-            <div className="w-4 h-4 border border-red-600 p-[2px] flex items-center justify-center rounded-[2px]" title="Non-Vegetarian">
-                <div className="w-2 h-2 bg-red-600 rounded-full" />
-            </div>
-        );
-    }
+    const dotSizeClasses = {
+        sm: 'w-2 h-2',
+        md: 'w-2.5 h-2.5',
+        lg: 'w-3 h-3'
+    };
 
-    if (type === 'egg') {
-        return (
-            <div className="w-4 h-4 border border-yellow-600 p-[2px] flex items-center justify-center rounded-[2px]" title="Contains Egg">
-                <div className="w-2 h-2 bg-yellow-600 rounded-full" />
-            </div>
-        );
-    }
+    const borderColors = {
+        veg: 'border-green-600',
+        'non-veg': 'border-red-600',
+        egg: 'border-amber-600'
+    };
 
-    return null;
-};
+    const dotColors = {
+        veg: 'bg-green-600',
+        'non-veg': 'bg-red-600',
+        egg: 'bg-amber-600'
+    };
+
+    return (
+        <div
+            className={`inline-flex items-center justify-center ${sizeClasses[size]} border-2 ${borderColors[type]} rounded-sm shrink-0`}
+            title={type === 'veg' ? 'Vegetarian' : type === 'non-veg' ? 'Non-Vegetarian' : 'Contains Egg'}
+        >
+            <div className={`${dotSizeClasses[size]} ${dotColors[type]} rounded-full`} />
+        </div>
+    );
+}

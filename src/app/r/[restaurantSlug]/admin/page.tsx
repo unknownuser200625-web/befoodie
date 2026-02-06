@@ -21,6 +21,7 @@ export default function AdminHub({
     const [loading, setLoading] = useState(true);
     const [selectedSession, setSelectedSession] = useState<TableSession | null>(null);
     const [auth, setAuth] = useState<{ authenticated: boolean; role: string | null } | null>(null);
+    const [sessionStatus, setSessionStatus] = useState<{ isOpen: boolean; isAcceptingOrders: boolean; businessDate: string | null } | null>(null);
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -40,6 +41,25 @@ export default function AdminHub({
             .then(res => res.json())
             .then(data => setRestaurant(data))
             .catch(err => console.error('Failed to fetch restaurant', err));
+    }, [restaurantSlug]);
+
+    // Fetch Session Status for button visibility control
+    const fetchSessionStatus = async () => {
+        try {
+            const res = await fetch(`/r/${restaurantSlug}/api/restaurant/session-status`);
+            if (res.ok) {
+                const data = await res.json();
+                setSessionStatus(data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch session status', err);
+        }
+    };
+
+    useEffect(() => {
+        fetchSessionStatus();
+        const interval = setInterval(fetchSessionStatus, 10000); // Poll every 10s
+        return () => clearInterval(interval);
     }, [restaurantSlug]);
 
     useEffect(() => {
@@ -123,15 +143,18 @@ export default function AdminHub({
                         ADMIN HUB
                         <span className="text-[10px] font-black bg-white/5 border border-white/10 px-2 py-1 rounded text-primary uppercase ml-2 italic">MASTER</span>
                     </h1>
-                    <button
-                        onClick={async () => {
-                            await fetch(`/r/${restaurantSlug}/api/auth/logout`, { method: 'POST' });
-                            window.location.href = `/r/${restaurantSlug}/admin/login`;
-                        }}
-                        className="bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white px-4 py-2 rounded-xl text-xs font-black transition-all border border-white/5 flex items-center gap-2"
-                    >
-                        <X size={14} /> LOGOUT
-                    </button>
+                    <div className="flex items-center gap-4">
+                        <LiveStatus />
+                        <button
+                            onClick={async () => {
+                                await fetch(`/r/${restaurantSlug}/api/auth/logout`, { method: 'POST' });
+                                window.location.href = `/r/${restaurantSlug}/admin/login`;
+                            }}
+                            className="bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white px-4 py-2 rounded-xl text-xs font-black transition-all border border-white/5 flex items-center gap-2"
+                        >
+                            <X size={14} /> LOGOUT
+                        </button>
+                    </div>
                 </div>
 
                 {/* Quick Navigation */}
@@ -200,54 +223,86 @@ export default function AdminHub({
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                            {/* Pause Orders Toggle */}
-                            <button
-                                onClick={async () => {
-                                    const nextState = !restaurant?.is_accepting_orders;
-                                    const res = await fetch(`/r/${restaurantSlug}/api/admin/pause-orders`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ isAcceptingOrders: nextState })
-                                    });
-                                    if (res.ok) {
-                                        setRestaurant(prev => prev ? { ...prev, is_accepting_orders: nextState } : null);
-                                    }
-                                }}
-                                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 rounded-2xl font-bold transition-all border ${restaurant?.is_accepting_orders
-                                    ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20'
-                                    : 'bg-emerald-500 text-black border-emerald-500 shadow-lg shadow-emerald-500/20'
-                                    }`}
-                            >
-                                <Flame size={20} className={restaurant?.is_accepting_orders ? '' : 'animate-pulse'} />
-                                {restaurant?.is_accepting_orders ? 'PAUSE ORDERS' : 'RESUME ORDERS'}
-                            </button>
+                            {/* START SESSION - Only visible when no active session */}
+                            {!sessionStatus?.isOpen && (
+                                <button
+                                    onClick={async () => {
+                                        if (confirm('START NEW SESSION?\n\nThis will:\n1. Create a new operational session for today\n2. Enable order acceptance\n3. Set system status to OPEN\n\nReady to begin?')) {
+                                            const res = await fetch(`/r/${restaurantSlug}/api/admin/start-new-day`, { method: 'POST' });
+                                            if (res.ok) {
+                                                alert("Session Started Successfully!");
+                                                fetchSessionStatus(); // Refresh status
+                                            }
+                                        }
+                                    }}
+                                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-black px-8 py-4 rounded-2xl font-black transition-all shadow-xl shadow-emerald-500/20 border border-emerald-400"
+                                >
+                                    <Flame size={20} className="animate-pulse" /> START SESSION
+                                </button>
+                            )}
+
+                            {/* PAUSE / RESUME ORDERS - Always visible when session is active */}
+                            {sessionStatus?.isOpen && (
+                                <button
+                                    onClick={async () => {
+                                        const nextState = !restaurant?.is_accepting_orders;
+                                        const res = await fetch(`/r/${restaurantSlug}/api/admin/pause-orders`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ isAcceptingOrders: nextState })
+                                        });
+                                        if (res.ok) {
+                                            setRestaurant(prev => prev ? { ...prev, is_accepting_orders: nextState } : null);
+                                            fetchSessionStatus(); // Refresh status
+                                        }
+                                    }}
+                                    className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 rounded-2xl font-bold transition-all border ${restaurant?.is_accepting_orders
+                                        ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20'
+                                        : 'bg-emerald-500 text-black border-emerald-500 shadow-lg shadow-emerald-500/20'
+                                        }`}
+                                >
+                                    <Flame size={20} className={restaurant?.is_accepting_orders ? '' : 'animate-pulse'} />
+                                    {restaurant?.is_accepting_orders ? 'PAUSE ORDERS' : 'RESUME ORDERS'}
+                                </button>
+                            )}
 
                             <Link href={`/r/${restaurantSlug}/admin/history`} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white px-6 py-4 rounded-2xl font-bold transition-all border border-white/10">
                                 <Clock size={20} /> History
                             </Link>
 
-                            <button
-                                onClick={async () => {
-                                    if (confirm('CLOSE BUSINESS DAY?\n\nThis will:\n1. Settlement: Aggregates all paid orders\n2. Security: Logouts all staff devices\n3. Finality: Archive data to History\n4. NEW: Reset operational status to CLOSED\n\nARE YOU SURE?')) {
-                                        const res = await fetch(`/r/${restaurantSlug}/api/admin/close-day`, { method: 'POST' });
-                                        if (res.ok) {
-                                            alert("Day Closed Successfully. Redirecting to History.");
-                                            window.location.href = `/r/${restaurantSlug}/admin/history`;
+                            {/* END SESSION - Always visible when session is active */}
+                            {sessionStatus?.isOpen && (
+                                <button
+                                    onClick={async () => {
+                                        if (confirm('CLOSE BUSINESS DAY?\n\nThis will:\n1. Settlement: Aggregates all paid orders\n2. Archive: Move data to History\n3. Status: Set operational status to CLOSED\n4. Security: Force admin re-login on next access\n\nARE YOU SURE?')) {
+                                            const res = await fetch(`/r/${restaurantSlug}/api/admin/close-day`, { method: 'POST' });
+                                            if (res.ok) {
+                                                alert("Day Closed Successfully. Redirecting to History.");
+                                                window.location.href = `/r/${restaurantSlug}/admin/history`;
+                                            }
                                         }
-                                    }
-                                }}
-                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-8 py-4 rounded-2xl font-black transition-all shadow-xl shadow-rose-950/20 border border-rose-500/50"
-                            >
-                                <CheckCircle size={20} /> CLOSE DAY
-                            </button>
+                                    }}
+                                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-8 py-4 rounded-2xl font-black transition-all shadow-xl shadow-rose-950/20 border border-rose-500/50"
+                                >
+                                    <CheckCircle size={20} /> END SESSION
+                                </button>
+                            )}
                         </div>
                     </div>
 
                     {/* Quick Warning if Paused */}
-                    {!restaurant?.is_accepting_orders && (
+                    {sessionStatus?.isOpen && !restaurant?.is_accepting_orders && (
                         <div className="mt-6 p-4 bg-amber-500/20 border border-amber-500/30 rounded-2xl flex items-center gap-3 text-amber-500">
                             <Flame size={18} className="shrink-0" />
                             <p className="text-sm font-bold">ORDERS ARE CURRENTLY PAUSED. Customers will see a "Temporarily Unavailable" message on the menu.</p>
+                        </div>
+                    )}
+
+                    {/* Warning if Session Closed */}
+                    {!sessionStatus?.isOpen && (
+                        <div className="mt-6 p-4 bg-rose-500/20 border border-rose-500/30 rounded-2xl flex items-center gap-3 text-rose-500">
+                            <CheckCircle size={18} className="shrink-0" />
+                            <p className="text-sm font-bold">NO ACTIVE SESSION. Click "START SESSION" to begin accepting orders for today.</p>
                         </div>
                     )}
                 </div>

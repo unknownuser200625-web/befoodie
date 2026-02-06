@@ -7,6 +7,7 @@ import { ArrowLeft, Search, Plus, Trash2, Edit2, X, Check, Minus, PlusCircle } f
 import Link from 'next/link';
 import { useEffect, useState, use } from 'react';
 import { io } from 'socket.io-client';
+import { ImageUpload } from '@/components/admin/ImageUpload';
 
 export default function ProductManagerPage({
     params,
@@ -112,11 +113,30 @@ export default function ProductManagerPage({
     };
 
     const toggleAvailability = async (product: Product) => {
-        await fetch(`/r/${restaurantSlug}/api/products/toggle`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: product.id, available: !product.available }),
-        });
+        const previousState = product.available;
+        const newState = !product.available;
+
+        // Optimistic UI update
+        setProducts(prev => prev.map(p => p.id === product.id ? { ...p, available: newState } : p));
+
+        try {
+            const res = await fetch(`/r/${restaurantSlug}/api/products/toggle`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: product.id, available: newState }),
+            });
+
+            if (!res.ok) throw new Error('Toggle failed');
+
+            // Success notification
+            const message = newState ? '✅ Product is now LIVE' : '🔴 Product hidden from menu';
+            alert(message); // Using simple alert - can be replaced with a toast library
+        } catch (error) {
+            // Rollback on error
+            setProducts(prev => prev.map(p => p.id === product.id ? { ...p, available: previousState } : p));
+            alert('❌ Failed to toggle product availability. Please try again.');
+            console.error('Toggle error:', error);
+        }
     };
 
     const adjustPrice = async (product: Product, delta: number) => {
@@ -193,34 +213,43 @@ export default function ProductManagerPage({
                                         </select>
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm text-gray-400 mb-1">Image Path (e.g. /products/item.jpg)</label>
-                                    <input
-                                        type="text"
-                                        placeholder="/products/placeholder.jpg"
-                                        value={formData.image}
-                                        onChange={e => setFormData({ ...formData, image: e.target.value || '' })}
-                                        className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg p-3 focus:border-primary outline-none"
-                                    />
-                                </div>
+                                <ImageUpload
+                                    currentImageUrl={formData.image}
+                                    onImageUrlChange={(url) => setFormData({ ...formData, image: url })}
+                                    restaurantSlug={restaurantSlug}
+                                />
                                 <div>
                                     <label className="block text-sm text-gray-400 mb-1">Dietary Type</label>
                                     <div className="grid grid-cols-3 gap-2">
-                                        {(['veg', 'non-veg', 'egg'] as const).map(type => (
-                                            <button
-                                                key={type}
-                                                type="button"
-                                                onClick={() => setFormData({ ...formData, food_type: type })}
-                                                className={`py-2 rounded-lg text-sm font-bold uppercase transition-all ${formData.food_type === type
-                                                    ? type === 'veg' ? 'bg-green-500/20 text-green-500 border border-green-500/50'
-                                                        : type === 'non-veg' ? 'bg-red-500/20 text-red-500 border border-red-500/50'
-                                                            : 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50'
-                                                    : 'bg-white/5 text-gray-500 border border-white/10 hover:bg-white/10'
-                                                    }`}
-                                            >
-                                                {type}
-                                            </button>
-                                        ))}
+                                        {(['veg', 'non-veg', 'egg'] as const).map(type => {
+                                            const isLocked = restaurant?.food_policy === 'PURE_VEG' && type !== 'veg';
+                                            return (
+                                                <button
+                                                    key={type}
+                                                    type="button"
+                                                    disabled={isLocked}
+                                                    onClick={() => {
+                                                        if (isLocked) {
+                                                            alert(`❌ Pure Veg restaurants can only add Vegetarian items.\n\nThis option is locked by your restaurant's food policy.`);
+                                                            return;
+                                                        }
+                                                        setFormData({ ...formData, food_type: type });
+                                                    }}
+                                                    title={isLocked ? 'Blocked by Pure Veg policy' : `Select ${type}`}
+                                                    className={`py-2 rounded-lg text-sm font-bold uppercase transition-all ${isLocked
+                                                            ? 'opacity-40 cursor-not-allowed bg-white/5 text-gray-600 border border-white/5'
+                                                            : formData.food_type === type
+                                                                ? type === 'veg' ? 'bg-green-500/20 text-green-500 border border-green-500/50'
+                                                                    : type === 'non-veg' ? 'bg-red-500/20 text-red-500 border border-red-500/50'
+                                                                        : 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50'
+                                                                : 'bg-white/5 text-gray-500 border border-white/10 hover:bg-white/10'
+                                                        }`}
+                                                >
+                                                    {isLocked && '🔒 '}
+                                                    {type}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 py-2">

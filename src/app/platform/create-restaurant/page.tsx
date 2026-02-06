@@ -10,7 +10,8 @@ export default function CreateRestaurantPage() {
         name: '',
         slug: '',
         password: '',
-        pin: '1234'
+        pin: '1234',
+        food_policy: 'MIXED' as 'PURE_VEG' | 'PURE_NON_VEG' | 'MIXED'
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -107,6 +108,50 @@ export default function CreateRestaurantPage() {
                             className="w-full bg-neutral-900 border border-neutral-700 rounded-xl px-4 py-3 text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
                             placeholder="e.g. Tasty Bites"
                         />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-neutral-300 mb-2">
+                            Food Policy * <span className="text-xs text-neutral-500">(Cannot be changed later)</span>
+                        </label>
+                        <div className="grid grid-cols-3 gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setFormData({ ...formData, food_policy: 'PURE_VEG' })}
+                                className={`p-4 border-2 rounded-xl transition-all text-center ${formData.food_policy === 'PURE_VEG'
+                                        ? 'border-green-500 bg-green-500/10'
+                                        : 'border-neutral-700 bg-neutral-900 hover:border-neutral-600'
+                                    }`}
+                            >
+                                <div className="text-3xl mb-2">🟢</div>
+                                <div className="text-xs font-bold text-white">Pure Veg</div>
+                                <div className="text-[10px] text-neutral-400 mt-1">Only veg items</div>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setFormData({ ...formData, food_policy: 'MIXED' })}
+                                className={`p-4 border-2 rounded-xl transition-all text-center ${formData.food_policy === 'MIXED'
+                                        ? 'border-amber-500 bg-amber-500/10'
+                                        : 'border-neutral-700 bg-neutral-900 hover:border-neutral-600'
+                                    }`}
+                            >
+                                <div className="text-3xl mb-2">🟢🔴</div>
+                                <div className="text-xs font-bold text-white">Mixed</div>
+                                <div className="text-[10px] text-neutral-400 mt-1">All types</div>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setFormData({ ...formData, food_policy: 'PURE_NON_VEG' })}
+                                className={`p-4 border-2 rounded-xl transition-all text-center ${formData.food_policy === 'PURE_NON_VEG'
+                                        ? 'border-red-500 bg-red-500/10'
+                                        : 'border-neutral-700 bg-neutral-900 hover:border-neutral-600'
+                                    }`}
+                            >
+                                <div className="text-3xl mb-2">🔴</div>
+                                <div className="text-xs font-bold text-white">Non-Veg</div>
+                                <div className="text-[10px] text-neutral-400 mt-1">All types</div>
+                            </button>
+                        </div>
                     </div>
 
                     <div>

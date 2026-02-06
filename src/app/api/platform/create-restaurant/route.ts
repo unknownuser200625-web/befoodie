@@ -6,10 +6,15 @@ import { randomUUID } from "node:crypto";
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { name, slug, email, password, pin } = body; // email is for future use/record
+        const { name, slug, email, password, pin, food_policy } = body; // email is for future use/record
 
-        if (!name || !slug || !password || !pin) {
+        if (!name || !slug || !password || !pin || !food_policy) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        }
+
+        // Validate food_policy
+        if (!['PURE_VEG', 'PURE_NON_VEG', 'MIXED'].includes(food_policy)) {
+            return NextResponse.json({ error: "Invalid food policy" }, { status: 400 });
         }
 
         // 1. Check uniqueness of slug
@@ -41,6 +46,7 @@ export async function POST(req: Request) {
                 name,
                 owner_password_hash: ownerPasswordHash,
                 staff_pin_hash: staffPinHash,
+                food_policy,
                 // created_at is default
             })
             .select()

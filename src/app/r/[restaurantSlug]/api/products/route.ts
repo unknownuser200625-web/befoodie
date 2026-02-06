@@ -44,12 +44,21 @@ export async function POST(
 
         const { data: restaurant, error: resError } = await supabase
             .from('restaurants')
-            .select('id')
+            .select('id, food_policy')
             .eq('slug', restaurantSlug)
             .single();
 
         if (resError || !restaurant) {
             return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
+        }
+
+        // Enforce food policy
+        const food_type = body.food_type || 'veg';
+        if (restaurant.food_policy === 'PURE_VEG' && food_type !== 'veg') {
+            return NextResponse.json(
+                { error: 'Pure Veg restaurants can only add Vegetarian items' },
+                { status: 403 }
+            );
         }
 
         const { data, error } = await supabase

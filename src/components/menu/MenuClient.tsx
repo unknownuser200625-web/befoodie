@@ -10,6 +10,7 @@ import { CartDrawer } from '@/components/cart/CartDrawer';
 import { Header } from '@/components/ui/Header';
 import { Footer } from '@/components/ui/Footer';
 import { LiveStatus } from '@/components/ui/LiveStatus';
+import { FoodTypeIcon } from '@/components/ui/FoodTypeIcon';
 
 export default function MenuClient({
     tableId,
@@ -22,6 +23,7 @@ export default function MenuClient({
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<string[]>([]);
     const [activeCategory, setActiveCategory] = useState<string>('All');
+    const [activeFoodType, setActiveFoodType] = useState<'All' | 'veg' | 'non-veg' | 'egg'>('All');
     const [searchTerm, setSearchTerm] = useState('');
     const [isCartOpen, setIsCartOpen] = useState(false);
 
@@ -78,9 +80,10 @@ export default function MenuClient({
         return products.filter(product => {
             const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesCategory = activeCategory === 'All' || product.category === activeCategory;
-            return matchesSearch && matchesCategory && (product.available !== false);
+            const matchesFoodType = activeFoodType === 'All' || product.food_type === activeFoodType;
+            return matchesSearch && matchesCategory && matchesFoodType && (product.available !== false);
         });
-    }, [products, searchTerm, activeCategory]);
+    }, [products, searchTerm, activeCategory, activeFoodType]);
 
     const displayCategories = activeCategory === 'All' ? categories : [activeCategory];
 
@@ -151,10 +154,42 @@ export default function MenuClient({
                     </div>
                 </div>
 
-                <div className="px-6 mb-10 overflow-x-auto no-scrollbar flex gap-3 max-w-4xl mx-auto">
+                {/* Food Type Filters - Only show for MIXED policy */}
+                {restaurant?.food_policy === 'MIXED' && (
+                    <div className="px-6 mb-6 flex gap-3 max-w-4xl mx-auto">
+                        <button
+                            onClick={() => setActiveFoodType('All')}
+                            className={`px-4 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${activeFoodType === 'All' ? 'bg-white text-black shadow-lg' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+                        >
+                            All
+                        </button>
+                        <button
+                            onClick={() => setActiveFoodType('veg')}
+                            className={`px-4 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${activeFoodType === 'veg' ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-white/5 text-green-400 hover:bg-green-500/10 border border-green-500/20'}`}
+                        >
+                            🌱 Veg
+                        </button>
+                        <button
+                            onClick={() => setActiveFoodType('non-veg')}
+                            className={`px-4 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${activeFoodType === 'non-veg' ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-white/5 text-red-400 hover:bg-red-500/10 border border-red-500/20'}`}
+                        >
+                            🍗 Non-Veg
+                        </button>
+                        <button
+                            onClick={() => setActiveFoodType('egg')}
+                            className={`px-4 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${activeFoodType === 'egg' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : 'bg-white/5 text-amber-400 hover:bg-amber-500/10 border border-amber-500/20'}`}
+                        >
+                            🥚 Egg
+                        </button>
+                    </div>
+                )}
+
+                {/* Category Filters with Snap Scrolling */}
+                <div className="px-6 mb-10 overflow-x-auto no-scrollbar flex gap-3 max-w-4xl mx-auto scroll-smooth" style={{ scrollSnapType: 'x mandatory' }}>
                     <button
                         onClick={() => setActiveCategory('All')}
                         className={`px-6 py-2.5 rounded-full font-bold whitespace-nowrap transition-all ${activeCategory === 'All' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+                        style={{ scrollSnapAlign: 'start' }}
                     >
                         All
                     </button>
@@ -163,6 +198,7 @@ export default function MenuClient({
                             key={cat}
                             onClick={() => setActiveCategory(cat)}
                             className={`px-6 py-2.5 rounded-full font-bold whitespace-nowrap transition-all ${activeCategory === cat ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+                            style={{ scrollSnapAlign: 'start' }}
                         >
                             {cat}
                         </button>
