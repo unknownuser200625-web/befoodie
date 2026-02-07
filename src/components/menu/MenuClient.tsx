@@ -90,53 +90,26 @@ export default function MenuClient({
     // Session Status Guard
     const [isSystemOpen, setIsSystemOpen] = useState(true);
     const [isAcceptingOrders, setIsAcceptingOrders] = useState(true);
-    const [serverBusinessDate, setServerBusinessDate] = useState<string | null>(null);
 
-    // CRITICAL: Clear stale sessions on menu load (fixes cross-device bug)
+    // Only validate global restaurant status for UI (No local session logic)
     useEffect(() => {
-        const validateSession = async () => {
+        const checkStatus = async () => {
             try {
                 const res = await fetch(`/r/${restaurantSlug}/api/restaurant/session-status`);
-                if (!res.ok) throw new Error('Session status unavailable');
+                if (!res.ok) return;
 
                 const data = await res.json();
-                const currentBusinessDate = data.businessDate;
-
-                console.log('[MENU SESSION] Server business_date:', currentBusinessDate);
-
-                // Check localStorage for stale session data
-                const storedBusinessDate = localStorage.getItem(`${tableId}_business_date`);
-                const storedTableSession = localStorage.getItem(`${tableId}_table_session`);
-
-                console.log('[MENU SESSION] Stored business_date:', storedBusinessDate);
-
-                // If dates don't match, clear stale session data
-                if (storedBusinessDate && storedBusinessDate !== currentBusinessDate) {
-                    console.warn('[MENU SESSION] Date mismatch! Clearing stale session data');
-                    localStorage.removeItem(`${tableId}_business_date`);
-                    localStorage.removeItem(`${tableId}_table_session`);
-                    localStorage.removeItem(`${tableId}_device_session`);
-                    // Force cart clear if context exists
-                    if (cartContext?.clearCart) {
-                        cartContext.clearCart();
-                    }
-                }
-
-                // Store current business date
-                localStorage.setItem(`${tableId}_business_date`, currentBusinessDate);
-                setServerBusinessDate(currentBusinessDate);
-
                 setIsSystemOpen(data.isOpen);
                 setIsAcceptingOrders(data.isAcceptingOrders);
             } catch (e) {
-                console.error('[MENU SESSION] Status fetch failed', e);
+                console.error('[MENU STATUS] Check failed', e);
             }
         };
 
-        validateSession();
-        const interval = setInterval(validateSession, 20000);
+        checkStatus();
+        const interval = setInterval(checkStatus, 20000);
         return () => clearInterval(interval);
-    }, [restaurantSlug, tableId, cartContext]);
+    }, [restaurantSlug]);
 
     const showOverlay = !isSystemOpen || !isAcceptingOrders;
 

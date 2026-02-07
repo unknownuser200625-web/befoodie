@@ -19,102 +19,23 @@ export async function POST(
             return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
         }
 
-        const today = new Date().toISOString().split('T')[0];
+        // 2. Call RPC to Start Session
+        const { data, error: rpcError } = await supabase
+            .rpc('start_operational_session', {
+                p_restaurant_id: restaurant.id
+            });
 
-        // 1. Close Past Active Sessions & Generate Summary
-        const { data: pastSessions } = await supabase
-            .from('restaurant_operational_sessions')
-            .select('id, business_date')
-            .eq('restaurant_id', restaurant.id)
-            .eq('status', 'active')
-            .lt('business_date', today);
-
-        if (pastSessions && pastSessions.length > 0) {
-            for (const sess of pastSessions) {
-                // Calculate Revenue from PAID table sessions
-                const { data: tableSessions } = await supabase
-                    .from('table_sessions')
-                    .select('total_amount')
-                    .eq('operational_session_id', sess.id)
-                    .eq('status', 'paid');
-
-                const revenue = tableSessions?.reduce((sum, t) => sum + Number(t.total_amount), 0) || 0;
-                const tablesServed = tableSessions?.length || 0;
-
-                // Archive to Summary
-                await supabase.from('restaurant_daily_summary').insert({
-                    restaurant_id: restaurant.id,
-                    business_date: sess.business_date,
-                    total_orders: tablesServed, // Tracking enabled tables
-                    total_revenue: revenue,
-                    closed_at: new Date().toISOString()
-                });
-
-                // Close the session
-                await supabase
-                    .from('restaurant_operational_sessions')
-                    .update({ status: 'closed', closed_at: new Date().toISOString() })
-                    .eq('id', sess.id);
-            }
+        if (rpcError) {
+            console.error('[START-NEW-DAY] RPC Failed:', rpcError);
+            return NextResponse.json({ error: rpcError.message }, { status: 400 }); // Likely 'already exists'
         }
 
-        // 2. Check/Create Operational Session for TODAY
-        const { data: existingSess, error: sessCheckError } = await supabase
-            .from('restaurant_operational_sessions')
-            .select('*')
-            .eq('restaurant_id', restaurant.id)
-            .eq('business_date', today)
-            .single();
-
-        let operationalSessionId = existingSess?.id;
-
-        if (!existingSess) {
-            console.log('[START-NEW-DAY] Creating new operational session for:', today);
-            // Start fresh session for the day
-            const { data: newSess, error: createError } = await supabase
-                .from('restaurant_operational_sessions')
-                .insert({
-                    restaurant_id: restaurant.id,
-                    business_date: today,
-                    status: 'active'
-                })
-                .select('id')
-                .single();
-
-            if (createError) {
-                console.error('[START-NEW-DAY] Failed to create session:', createError);
-                throw createError;
-            }
-            operationalSessionId = newSess.id;
-            console.log('[START-NEW-DAY] Created session:', operationalSessionId);
-        } else if (existingSess.status === 'closed') {
-            console.log('[START-NEW-DAY] Re-opening closed session:', existingSess.id);
-            // Re-open if closed (Operational preference: Usually we just reactivate or create new if schema allowed)
-            const { error: openError } = await supabase
-                .from('restaurant_operational_sessions')
-                .update({ status: 'active', closed_at: null })
-                .eq('id', existingSess.id);
-
-            if (openError) {
-                console.error('[START-NEW-DAY] Failed to re-open session:', openError);
-                throw openError;
-            }
-        } else {
-            console.log('[START-NEW-DAY] Session already active:', existingSess.id);
-        }
-
-        // 3. LEGACY COMPATIBILITY: Update is_system_open
-        await supabase
-            .from('restaurants')
-            .update({ is_system_open: true })
-            .eq('id', restaurant.id);
-
-        console.log('[START-NEW-DAY] Session started successfully:', operationalSessionId);
+        console.log('[START-NEW-DAY] Success:', data);
 
         return NextResponse.json({
             success: true,
-            operationalSessionId,
-            message: "Operational session started successfully"
+            operationalSessionId: data.operational_session_id,
+            message: data.message
         });
     } catch (error) {
         console.error('Start New Day error', error);

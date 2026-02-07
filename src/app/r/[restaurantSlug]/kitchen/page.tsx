@@ -17,7 +17,6 @@ export default function KitchenPage({
     const { restaurantSlug } = use(params);
     const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
     const [orders, setOrders] = useState<Order[]>([]);
-    const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
     const [now, setNow] = useState<number>(Date.now());
     const [audioEnabled, setAudioEnabled] = useState(false);
     const [role, setRole] = useState<string | null>(null);
@@ -26,9 +25,8 @@ export default function KitchenPage({
     const alarmRef = useRef<HTMLAudioElement | null>(null);
 
     // Stale-while-revalidate caches
-    const cache = useRef<{ orders: Order[], sessionId: string | null }>({
-        orders: [],
-        sessionId: null
+    const cache = useRef<{ orders: Order[] }>({
+        orders: []
     });
 
     // Auth check
@@ -65,18 +63,7 @@ export default function KitchenPage({
         return () => clearInterval(interval);
     }, []);
 
-    const fetchSessionId = async () => {
-        try {
-            const res = await fetch(`/r/${restaurantSlug}/api/business-date`);
-            if (res.ok) {
-                const data = await res.json();
-                setCurrentSessionId(data.date);
-                cache.current.sessionId = data.date;
-            }
-        } catch (err) {
-            console.error('Failed to fetch session ID', err);
-        }
-    };
+
 
     const fetchOrders = async () => {
         try {
@@ -107,36 +94,10 @@ export default function KitchenPage({
     };
 
     useEffect(() => {
-        fetchSessionId();
         fetchOrders();
 
         // Polling only - socket.io temporarily disabled for stability
         const pollInterval = setInterval(fetchOrders, 10000);
-
-        /* SOCKET.IO DISABLED - Causing false CONNECTION LOST errors
-        const socket = io({
-            query: { restaurantSlug }
-        });
-
-        socket.on('new_order', (newOrder: Order) => {
-            setOrders(prev => [newOrder, ...prev]);
-            cache.current.orders = [newOrder, ...cache.current.orders];
-        });
-
-        socket.on('day_reset', () => setOrders([]));
-
-        socket.on('session_reset', () => {
-            setOrders([]);
-            fetchSessionId();
-        });
-
-        socket.on('orders_refresh', fetchOrders);
-
-        socket.on('order_updated', (updated: Order) => {
-            setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
-            cache.current.orders = cache.current.orders.map(o => o.id === updated.id ? updated : o);
-        });
-        */
 
         return () => {
             // socket.disconnect();
@@ -179,7 +140,6 @@ export default function KitchenPage({
     const activeStatuses = ['Pending', 'Accepted', 'Ready'];
     const activeOrders = orders
         .filter(o => activeStatuses.includes(o.status))
-        .filter(o => !currentSessionId || o.businessDate === currentSessionId)
         .sort((a, b) => b.timestamp - a.timestamp);
 
     return (
