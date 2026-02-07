@@ -90,22 +90,53 @@ export default function MenuClient({
     // Session Status Guard
     const [isSystemOpen, setIsSystemOpen] = useState(true);
     const [isAcceptingOrders, setIsAcceptingOrders] = useState(true);
+    const [serverBusinessDate, setServerBusinessDate] = useState<string | null>(null);
 
+    // CRITICAL: Clear stale sessions on menu load (fixes cross-device bug)
     useEffect(() => {
-        const checkStatus = async () => {
+        const validateSession = async () => {
             try {
                 const res = await fetch(`/r/${restaurantSlug}/api/restaurant/session-status`);
+                if (!res.ok) throw new Error('Session status unavailable');
+
                 const data = await res.json();
+                const currentBusinessDate = data.businessDate;
+
+                console.log('[MENU SESSION] Server business_date:', currentBusinessDate);
+
+                // Check localStorage for stale session data
+                const storedBusinessDate = localStorage.getItem(`${tableId}_business_date`);
+                const storedTableSession = localStorage.getItem(`${tableId}_table_session`);
+
+                console.log('[MENU SESSION] Stored business_date:', storedBusinessDate);
+
+                // If dates don't match, clear stale session data
+                if (storedBusinessDate && storedBusinessDate !== currentBusinessDate) {
+                    console.warn('[MENU SESSION] Date mismatch! Clearing stale session data');
+                    localStorage.removeItem(`${tableId}_business_date`);
+                    localStorage.removeItem(`${tableId}_table_session`);
+                    localStorage.removeItem(`${tableId}_device_session`);
+                    // Force cart clear if context exists
+                    if (cartContext?.clearCart) {
+                        cartContext.clearCart();
+                    }
+                }
+
+                // Store current business date
+                localStorage.setItem(`${tableId}_business_date`, currentBusinessDate);
+                setServerBusinessDate(currentBusinessDate);
+
                 setIsSystemOpen(data.isOpen);
                 setIsAcceptingOrders(data.isAcceptingOrders);
             } catch (e) {
-                console.error("Status fetch failed", e);
+                console.error('[MENU SESSION] Status fetch failed', e);
             }
         };
-        checkStatus();
-        const interval = setInterval(checkStatus, 20000);
+
+        validateSession();
+        const interval = setInterval(validateSession, 20000);
         return () => clearInterval(interval);
-    }, [restaurantSlug]);
+    }, [restaurantSlug, tableId, cartContext]);
 
     const showOverlay = !isSystemOpen || !isAcceptingOrders;
 

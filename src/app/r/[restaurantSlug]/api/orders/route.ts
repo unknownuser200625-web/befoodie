@@ -84,6 +84,8 @@ export async function POST(
         const body = await request.json();
         const { tableId, items, totalPrice } = body;
 
+        console.log('[ORDER CREATE] Starting order creation for table:', tableId);
+
         const { data: restaurant, error: resError } = await supabase
             .from('restaurants')
             .select('id')
@@ -91,23 +93,53 @@ export async function POST(
             .single();
 
         if (resError || !restaurant) {
+            console.error('[ORDER CREATE] Restaurant not found:', resError);
             return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
         }
 
-        // 1. Resolve Table Session (Ensures active operational session exists)
+        // 1. CRITICAL: Fetch active operational session FIRST
+        const today = new Date().toISOString().split('T')[0];
+        const { data: opsSession, error: opsError } = await supabase
+            .from('restaurant_operational_sessions')
+            .select('id, business_date')
+            .eq('restaurant_id', restaurant.id)
+            .eq('business_date', today)
+            .eq('status', 'active')
+            .maybeSingle();
+
+        if (opsError) {
+            console.error('[ORDER CREATE] Failed to fetch operational session:', opsError);
+            throw opsError;
+        }
+
+        if (!opsSession) {
+            console.error('[ORDER CREATE] No active operational session - restaurant is closed');
+            return NextResponse.json({
+                error: 'Restaurant is not accepting orders. Please contact staff.'
+            }, { status: 403 });
+        }
+
+        console.log('[ORDER CREATE] Active operational session:', opsSession.id);
+
+        // 2. Resolve Table Session (links to operational session)
         let tableSessionId;
         try {
             tableSessionId = await getOrCreateTableSession(restaurant.id, tableId);
         } catch (e: any) {
+            console.error('[ORDER CREATE] Table session error:', e.message);
             return NextResponse.json({ error: e.message || "Session error" }, { status: 403 });
         }
 
-        // 2. Create Order
+        console.log('[ORDER CREATE] Table session:', tableSessionId);
+
+        // 3. Create Order with operational_session_id and business_date
         const { data: order, error: orderError } = await supabase
             .from('orders')
             .insert({
                 restaurant_id: restaurant.id,
                 table_session_id: tableSessionId,
+                operational_session_id: opsSession.id, // CRITICAL FIX
+                business_date: opsSession.business_date, // CRITICAL FIX
                 table_id: tableId,
                 total_price: totalPrice,
                 status: 'Pending',
@@ -116,7 +148,12 @@ export async function POST(
             .select()
             .single();
 
-        if (orderError) throw orderError;
+        if (orderError) {
+            console.error('[ORDER CREATE] Order insert failed:', orderError);
+            throw orderError;
+        }
+
+        console.log('[ORDER CREATE] Order created:', order.id, 'operationalSessionId:', opsSession.id);
 
         // 3. Create Order Items
         const orderItems = items.map((item: any) => ({
