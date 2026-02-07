@@ -79,7 +79,7 @@ export async function POST(
             .rpc('place_restaurant_order', {
                 p_restaurant_id: restaurant.id,
                 p_table_id: tableId,
-                p_items: items,
+                p_order_items: items,
                 p_total_price: totalPrice
             });
 

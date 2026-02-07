@@ -11,7 +11,7 @@ export async function GET(
         // 1. Resolve Restaurant
         const { data: restaurant, error: resError } = await supabase
             .from('restaurants')
-            .select('id, is_accepting_orders, is_system_open')
+            .select('id, is_accepting_orders')
             .eq('slug', restaurantSlug)
             .single();
 
@@ -41,7 +41,6 @@ export async function GET(
 
         const response = {
             isOpen: !!session,
-            isSystemOpen: restaurant.is_system_open, // LEGACY FLAG for debugging
             isAcceptingOrders: restaurant.is_accepting_orders,
             businessDate: session?.business_date || today,
             operationalSessionId: session?.id || null
