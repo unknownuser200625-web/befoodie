@@ -229,9 +229,12 @@ export default function AdminHub({
                                     onClick={async () => {
                                         if (confirm('START NEW SESSION?\n\nThis will:\n1. Create a new operational session for today\n2. Enable order acceptance\n3. Set system status to OPEN\n\nReady to begin?')) {
                                             const res = await fetch(`/r/${restaurantSlug}/api/admin/start-new-day`, { method: 'POST' });
-                                            if (res.ok) {
+                                            const data = await res.json();
+                                            if (data?.operational_session_id) {
                                                 alert("Session Started Successfully!");
                                                 fetchSessionStatus(); // Refresh status
+                                            } else {
+                                                alert("Session creation failed: " + (data.error || "Unknown error"));
                                             }
                                         }
                                     }}
