@@ -8,39 +8,30 @@ export async function GET(
     try {
         const { restaurantSlug } = await params;
 
-        // 1. Resolve Restaurant
-        const { data: restaurant, error: resError } = await supabase
-            .from('restaurants')
-            .select('id, is_accepting_orders')
-            .eq('slug', restaurantSlug)
-            .single();
+        // 1. Call Security Definer RPC
+        const { data: statusData, error: rpcError } = await supabase
+            .rpc('get_restaurant_status', {
+                p_slug: restaurantSlug
+            });
 
-        console.log('[SESSION-STATUS] Restaurant lookup:', { restaurantSlug, found: !!restaurant });
+        if (rpcError) {
+            console.error('[SESSION-STATUS] RPC error:', rpcError);
+            throw rpcError;
+        }
 
-        if (resError || !restaurant) {
-            console.error('[SESSION-STATUS] Restaurant not found:', resError);
+        if (!statusData || statusData.length === 0) {
             return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
         }
 
+        // 2. Handle Array Response
+        const status = statusData[0];
         const today = new Date().toISOString().split('T')[0];
 
-        // 2. Query Single Source of Truth View
-        const { data: statusView, error: viewError } = await supabase
-            .from('restaurant_status')
-            .select('is_system_open, is_accepting_orders, current_business_date, active_operational_session_id')
-            .eq('restaurant_id', restaurant.id)
-            .single();
-
-        if (viewError) {
-            console.error('[SESSION-STATUS] View query error:', viewError);
-            throw viewError;
-        }
-
         const response = {
-            is_system_open: statusView?.is_system_open ?? false,
-            is_accepting_orders: statusView?.is_accepting_orders ?? false,
-            current_business_date: statusView?.current_business_date || today,
-            active_operational_session_id: statusView?.active_operational_session_id || null
+            is_system_open: status.is_system_open,
+            is_accepting_orders: status.is_accepting_orders,
+            current_business_date: status.current_business_date || today,
+            active_operational_session_id: status.active_operational_session_id
         };
 
         console.log('[SESSION-STATUS] Response:', response);
