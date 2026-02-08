@@ -24,15 +24,23 @@ export const LiveStatus: React.FC = () => {
             const res = await fetch(`/r/${restaurantSlug}/api/restaurant/session-status`);
             if (!res.ok) throw new Error('API_UNAVAILABLE');
 
-            const data: SessionStatus & { isAcceptingOrders: boolean } = await res.json();
+            const apiData = await res.json();
+
+            // Map snake_case API to component state
+            const mappedStatus = {
+                isOpen: apiData.is_system_open,
+                businessDate: apiData.current_business_date,
+                sessionId: apiData.active_operational_session_id,
+                isAcceptingOrders: apiData.is_accepting_orders
+            };
 
             // Success logic
-            setStatus(data);
+            setStatus(mappedStatus);
             setConsecutiveFailures(0);
 
-            if (!data.isOpen) {
+            if (!mappedStatus.isOpen) {
                 setOpState('CLOSED');
-            } else if (data.isAcceptingOrders === false) {
+            } else if (mappedStatus.isAcceptingOrders === false) {
                 setOpState('PAUSED');
             } else {
                 setOpState('OPEN');

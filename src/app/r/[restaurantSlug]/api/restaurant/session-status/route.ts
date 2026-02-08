@@ -24,26 +24,23 @@ export async function GET(
 
         const today = new Date().toISOString().split('T')[0];
 
-        // 2. Fetch Active Operational Session (Ignore date-strictness to prevent timezone sync issues)
-        const { data: session, error: sessError } = await supabase
-            .from('restaurant_operational_sessions')
-            .select('*')
+        // 2. Query Single Source of Truth View
+        const { data: statusView, error: viewError } = await supabase
+            .from('restaurant_status')
+            .select('is_system_open, is_accepting_orders, current_business_date, active_operational_session_id')
             .eq('restaurant_id', restaurant.id)
-            .eq('status', 'active')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+            .single();
 
-        if (sessError) {
-            console.error('[SESSION-STATUS] Session query error:', sessError);
-            throw sessError;
+        if (viewError) {
+            console.error('[SESSION-STATUS] View query error:', viewError);
+            throw viewError;
         }
 
         const response = {
-            isOpen: !!session,
-            isAcceptingOrders: restaurant.is_accepting_orders,
-            businessDate: session?.business_date || today,
-            operationalSessionId: session?.id || null
+            is_system_open: statusView?.is_system_open ?? false,
+            is_accepting_orders: statusView?.is_accepting_orders ?? false,
+            current_business_date: statusView?.current_business_date || today,
+            active_operational_session_id: statusView?.active_operational_session_id || null
         };
 
         console.log('[SESSION-STATUS] Response:', response);

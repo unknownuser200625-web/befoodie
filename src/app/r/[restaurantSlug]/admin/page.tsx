@@ -49,7 +49,11 @@ export default function AdminHub({
             const res = await fetch(`/r/${restaurantSlug}/api/restaurant/session-status`);
             if (res.ok) {
                 const data = await res.json();
-                setSessionStatus(data);
+                setSessionStatus({
+                    isOpen: data.is_system_open,
+                    isAcceptingOrders: data.is_accepting_orders,
+                    businessDate: data.current_business_date
+                });
             }
         } catch (err) {
             console.error('Failed to fetch session status', err);
@@ -230,7 +234,8 @@ export default function AdminHub({
                                         if (confirm('START NEW SESSION?\n\nThis will:\n1. Create a new operational session for today\n2. Enable order acceptance\n3. Set system status to OPEN\n\nReady to begin?')) {
                                             const res = await fetch(`/r/${restaurantSlug}/api/admin/start-new-day`, { method: 'POST' });
                                             const data = await res.json();
-                                            if (data?.operational_session_id) {
+                                            // Fix: Check for operationalSessionId (camelCase from API) OR operational_session_id (if API changes)
+                                            if (data?.operationalSessionId || data?.operational_session_id) {
                                                 alert("Session Started Successfully!");
                                                 fetchSessionStatus(); // Refresh status
                                             } else {
