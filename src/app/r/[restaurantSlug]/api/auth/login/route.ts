@@ -94,25 +94,32 @@ export async function POST(
             const finalDeviceName = inputDeviceName || fallbackDeviceName;
 
             // Create new device session (Logical creation, no reuse)
-            const { data: sessionData, error: sessionError } = await supabase
-                .from('device_sessions')
-                .insert({
-                    restaurant_id: restaurant.id,
-                    role: authenticatedRole,
-                    device_name: finalDeviceName,
-                    browser: userAgent,
-                    ip_address: ip,
-                    is_active: true
-                })
-                .select('id')
-                .single();
+            // Create new device session (Logical creation, no reuse)
+            // Fix: Make session creation best-effort. Do not block login if it fails.
+            let deviceSessionId = `fallback-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-            if (sessionError || !sessionData) {
-                console.error("Failed to create device session:", sessionError);
-                return NextResponse.json({ error: "Session creation failed" }, { status: 500 });
+            try {
+                const { data: sessionData, error: sessionError } = await supabase
+                    .from('device_sessions')
+                    .insert({
+                        restaurant_id: restaurant.id,
+                        role: authenticatedRole,
+                        device_name: finalDeviceName,
+                        browser: userAgent,
+                        ip_address: ip,
+                        is_active: true
+                    })
+                    .select('id')
+                    .single();
+
+                if (sessionError) {
+                    console.error("Device session creation warning (non-fatal):", sessionError);
+                } else if (sessionData) {
+                    deviceSessionId = sessionData.id;
+                }
+            } catch (e) {
+                console.error("Device session creation exception (non-fatal):", e);
             }
-
-            const deviceSessionId = sessionData.id;
 
             // JWT includes restaurant info + deviceSessionId for display isolation
             const token = jwt.sign(
